@@ -1,0 +1,9 @@
+# Event Types (Badminton)
+
+1. MATCH_START
+2. RALLY_START
+3. SHOT_PLAYED
+4. POINT_WON
+5. GAME_OVER
+6. MATCH_OVER
+
