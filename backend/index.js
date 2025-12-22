@@ -85,10 +85,44 @@ app.post("/event", async (req, res) => {
     res.status(500).json({ error: "Firebase error" });
   }
 });
+
 async function collegeExists(college_id) {
   const snapshot = await db.ref(`colleges/${college_id}`).once("value");
   return snapshot.exists();
 }
+
+async function adminAuth(req, res, next) {
+  const adminId = req.headers["x-admin-id"];
+
+  if (!adminId) {
+    return res.status(401).json({ error: "Admin ID missing" });
+  }
+
+  const snapshot = await db.ref(`admins/${adminId}`).once("value");
+
+  if (!snapshot.exists()) {
+    return res.status(401).json({ error: "Invalid admin ID" });
+  }
+
+  req.admin = snapshot.val(); // attach admin data
+  next();
+}
+
+function requireSuperAdmin(req, res, next) {
+  if (req.admin.role !== "super_admin") {
+    return res.status(403).json({ error: "Super admin access required" });
+  }
+  next();
+}
+
+function requireMatchAdmin(req, res, next) {
+  if (req.admin.role !== "match_admin") {
+    return res.status(403).json({ error: "Match admin access required" });
+  }
+  next();
+}
+
+
 
 app.post("/system/create-college", async (req, res) => {
   const { name, code } = req.body;
@@ -240,6 +274,38 @@ app.post("/system/create-match", async (req, res) => {
   res.json({ message: "Match created", match_id: ref.key });
 });
 
+app.post(
+  "/admin/create-match",
+  adminAuth,
+  requireSuperAdmin,
+  async (req, res) => {
+    const {
+      sport,
+      participant_type,
+      participantA,
+      participantB
+    } = req.body;
+
+    const college_id = req.admin.college_id;
+
+    const ref = db.ref(`matches/${college_id}`).push();
+
+    await ref.set({
+      match_id: ref.key,
+      sport,
+      participant_type,
+      participantA,
+      participantB,
+      status: "upcoming",
+      assigned_admin: null,
+      created_at: Date.now()
+    });
+
+    res.json({ message: "Match created", match_id: ref.key });
+  }
+);
+
+
 app.post("/system/create-tournament", async (req, res) => {
   const { name, sport, college_id, mode } = req.body;
 
@@ -258,6 +324,85 @@ app.post("/system/create-tournament", async (req, res) => {
 
   res.json({ message: "Tournament created", tournament_id: ref.key });
 });
+
+app.post(
+  "/admin/create-tournament",
+  adminAuth,
+  requireSuperAdmin,
+  async (req, res) => {
+    const { name, sport, mode } = req.body;
+    const college_id = req.admin.college_id;
+
+    // ✅ VALIDATION
+    if (!name || !sport || !mode) {
+      return res.status(400).json({
+        error: "Missing required fields: name, sport, mode"
+      });
+    }
+
+    const ref = db.ref(`tournaments/${college_id}`).push();
+
+    await ref.set({
+      tournament_id: ref.key,
+      name,
+      sport,
+      mode,
+      created_at: Date.now()
+    });
+
+    res.json({
+      message: "Tournament created",
+      tournament_id: ref.key
+    });
+  }
+);
+
+
+
+app.post(
+  "/admin/assign-match",
+  adminAuth,
+  requireSuperAdmin,
+  async (req, res) => {
+    const { match_id, match_admin_id } = req.body;
+    const college_id = req.admin.college_id;
+
+    const matchRef = db.ref(`matches/${college_id}/${match_id}`);
+    const matchSnap = await matchRef.once("value");
+
+    if (!matchSnap.exists()) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    await matchRef.child("assigned_admin").set(match_admin_id);
+
+    res.json({ message: "Match admin assigned" });
+  }
+);
+
+app.get(
+  "/admin/my-matches",
+  adminAuth,
+  requireMatchAdmin,
+  async (req, res) => {
+    const college_id = req.admin.college_id;
+    const adminId = req.admin.admin_id;
+
+    const snapshot = await db.ref(`matches/${college_id}`).once("value");
+    const result = [];
+
+    snapshot.forEach((child) => {
+      const match = child.val();
+      if (match.assigned_admin === adminId) {
+        result.push(match);
+      }
+    });
+
+    res.json(result);
+  }
+);
+
+
 
 
 
