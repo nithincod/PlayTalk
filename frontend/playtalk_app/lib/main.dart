@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playtalk_app/core/constants/app_routes.dart';
+import 'package:playtalk_app/features/match_admin/presentation/pages/match_admin_home_page.dart';
+import 'package:playtalk_app/features/super_admin/presentation/pages/super_admin_home_page.dart';
+import 'package:playtalk_app/features/user/presentation/pages/user_home_page.dart';
 
+import 'features/auth/presentation/pages/role_loader.dart';
 import 'features/commentary/data/datasources/commentary_firebase_datasource.dart';
 import 'features/commentary/data/repositories/commentary_repository_impl.dart';
 import 'features/commentary/domain/usecases/listen_to_commentary.dart';
@@ -18,21 +23,35 @@ void main() async {
   final usecase = ListenToCommentary(repository);
 
   runApp(
-    BlocProvider(
-      create: (_) =>
-          CommentaryBloc(usecase)..add(StartCommentaryListening()),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) =>
+              CommentaryBloc(usecase)..add(StartCommentaryListening()),
+        ),
+      ],
       child: const PlayTalkApp(),
     ),
   );
 }
+
 
 class PlayTalkApp extends StatelessWidget {
   const PlayTalkApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: LiveMatchPage(),
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      initialRoute: AppRoutes.roleLoader,
+      routes: {
+        AppRoutes.roleLoader: (_) => const RoleLoaderPage(),
+        AppRoutes.superAdminHome: (_) => const SuperAdminHomePage(),
+        AppRoutes.matchAdminHome: (_) => const MatchAdminHomePage(),
+        AppRoutes.userHome: (_) => const UserHomePage(),
+        AppRoutes.liveMatch: (_) => const LiveMatchPage(), // 👈 YOUR PAGE
+      },
     );
   }
 }
+
