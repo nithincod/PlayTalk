@@ -1,16 +1,64 @@
-# Node.js
-node_modules/
-.env
-
-# Flutter
-build/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-
-# OS
+############################
+# OS / System
+############################
 .DS_Store
 
-# IDE
+############################
+# IDEs / Editors
+############################
 .vscode/
 .idea/
+Visual Studio Code.app/
+
+############################
+# Node.js (Backend)
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.env
+
+############################
+# Firebase / Secrets
+############################
+firebase-key.json
+serviceAccountKey.json
+google-services.json
+GoogleService-Info.plist
+
+############################
+# Flutter (Frontend)
+############################
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+.dart_tool/
+
+############################
+# Android
+############################
+android/.gradle/
+android/local.properties
+android/app/build/
+
+############################
+# iOS / macOS
+############################
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/App.framework
+macos/Pods/
+macos/Flutter/ephemeral/
+
+############################
+# Archives
+############################
+*.zip
+*.tar.gz
+*.rar
