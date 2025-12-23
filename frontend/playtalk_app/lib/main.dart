@@ -13,6 +13,12 @@ import 'features/commentary/domain/usecases/listen_to_commentary.dart';
 import 'features/commentary/presentation/bloc/commentary_bloc.dart';
 import 'features/commentary/presentation/bloc/commentary_event.dart';
 import 'features/commentary/presentation/pages/live_match_page.dart';
+import 'features/super_admin/data/datasources/tournament_remote_datasource.dart';
+import 'features/super_admin/data/repositories/tournament_repository_impl.dart';
+import 'features/super_admin/domain/usecases/create_tournament.dart';
+import 'features/super_admin/domain/usecases/get_tournaments.dart';
+import 'features/super_admin/presentation/bloc/tournament_bloc.dart';
+import 'features/super_admin/presentation/bloc/tournament_event.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,14 +30,32 @@ void main() async {
 
   runApp(
     MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) =>
-              CommentaryBloc(usecase)..add(StartCommentaryListening()),
-        ),
-      ],
-      child: const PlayTalkApp(),
+  providers: [
+    BlocProvider(
+      create: (_) =>
+          CommentaryBloc(usecase)..add(StartCommentaryListening()),
     ),
+    BlocProvider(
+  create: (_) {
+    final datasource = TournamentRemoteDatasource(
+      baseUrl: "http://10.0.2.2:3000",
+      adminId: "-Oh19e8DauETQEhQxB5G",
+    );
+
+    final repo = TournamentRepositoryImpl(datasource);
+
+    return TournamentBloc(
+      getTournaments: GetTournaments(repo),
+      createTournament: CreateTournament(repo),
+    )..add(LoadTournaments());
+  },
+),
+
+  ],
+  child: const PlayTalkApp(),
+    )
+
+
   );
 }
 
