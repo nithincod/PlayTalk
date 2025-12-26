@@ -1,35 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/models/tournament_model.dart';
-import '../bloc/tornament_state.dart';
+
 import '../bloc/tournament_bloc.dart';
+import '../bloc/tornament_state.dart';
+import '../../domain/models/tournament_model.dart';
 import 'create_tournament_page.dart';
+import 'tournament_details_page.dart';
 
 class SuperAdminHomePage extends StatelessWidget {
   const SuperAdminHomePage({super.key});
 
-  // TEMP DUMMY DATA (WILL COME FROM BACKEND LATER)
-  List<TournamentModel> _dummyTournaments() {
-    return [
-      TournamentModel(
-        id: "1",
-        name: "Inter-College Badminton",
-        sport: "Badminton",
-        mode: "Manual",
-      ),
-      TournamentModel(
-        id: "2",
-        name: "Kabaddi League",
-        sport: "Kabaddi",
-        mode: "Automatic",
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
-    // final tournaments = _dummyTournaments();
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Super Admin Dashboard"),
@@ -67,31 +49,59 @@ class SuperAdminHomePage extends StatelessWidget {
             const SizedBox(height: 12),
 
             Expanded(
-  child: BlocBuilder<TournamentBloc, TournamentState>(
-    builder: (context, state) {
-      if (state is TournamentLoading) {
-        return const Center(child: CircularProgressIndicator());
-      } else if (state is TournamentLoaded) {
-        return ListView.builder(
-          itemCount: state.tournaments.length,
-          itemBuilder: (context, index) {
-            final t = state.tournaments[index];
-            return Card(
-              child: ListTile(
-                title: Text(t.name),
-                subtitle: Text("${t.sport} • ${t.mode}"),
-              ),
-            );
-          },
-        );
-      } else if (state is TournamentError) {
-        return Center(child: Text(state.message));
-      }
-      return const SizedBox();
-    },
-  ),
-            )
+              child: BlocBuilder<TournamentBloc, TournamentState>(
+                builder: (context, state) {
+                  if (state is TournamentLoading) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
 
+                  if (state is TournamentLoaded) {
+                    if (state.tournaments.isEmpty) {
+                      return const Center(
+                        child: Text("No tournaments created yet"),
+                      );
+                    }
+
+                    return ListView.builder(
+                      itemCount: state.tournaments.length,
+                      itemBuilder: (context, index) {
+                        final TournamentModel t =
+                            state.tournaments[index];
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: ListTile(
+                            title: Text(t.name),
+                            subtitle: Text("${t.sport} • ${t.mode}"),
+                            trailing:
+                                const Icon(Icons.arrow_forward_ios, size: 16),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      TournamentDetailsPage(tournament: t),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  }
+
+                  if (state is TournamentError) {
+                    return Center(
+                      child: Text(state.message),
+                    );
+                  }
+
+                  return const SizedBox();
+                },
+              ),
+            ),
           ],
         ),
       ),
