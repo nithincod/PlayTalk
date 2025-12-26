@@ -1,77 +1,73 @@
 import 'package:flutter/material.dart';
-import '../../../super_admin/domain/models/match_model.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playtalk_app/features/match_admin/presentation/bloc/match_admin_matches_bloc.dart';
 
-class MatchAdminHomePage extends StatelessWidget {
-  const MatchAdminHomePage({super.key});
+import '../../data/datasources/match_admin_matches_remote_datasource.dart';
+import '../../domain/models/match_model.dart';
+import '../bloc/match_admin_matches_event.dart';
+import '../bloc/match_admin_matches_state.dart';
 
-  // TEMP DUMMY MATCHES
-  List<MatchModel> _assignedMatches() {
-    return [
-      MatchModel(
-        id: "1",
-        name: "Quarter Final 1",
-        teamA: "Team A",
-        teamB: "Team B",
-        court: "Court 1",
-        matchType: "Singles",
-      ),
-      MatchModel(
-        id: "2",
-        name: "Semi Final",
-        teamA: "Team C",
-        teamB: "Team D",
-        court: "Court 2",
-        matchType: "Doubles",
-      ),
-    ];
-  }
+class AdminHomePage extends StatelessWidget {
+  final String adminId;
+
+  const AdminHomePage({
+    super.key,
+    required this.adminId,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final matches = _assignedMatches();
+    return BlocProvider(
+      create: (_) => AdminMatchesBloc(
+        AdminMatchesRemoteDatasource("http://192.168.1.9:3000"),
+      )..add(LoadAdminMatches(adminId)),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("My Matches"),
+        ),
+        body: BlocBuilder<AdminMatchesBloc, AdminMatchesState>(
+          builder: (context, state) {
+            if (state is AdminMatchesLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Match Admin Dashboard"),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Assigned Matches",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            if (state is AdminMatchesLoaded) {
+              if (state.matches.isEmpty) {
+                return const Center(
+                  child: Text("No assigned matches"),
+                );
+              }
 
-            const SizedBox(height: 16),
-
-            Expanded(
-              child: ListView.builder(
-                itemCount: matches.length,
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: state.matches.length,
                 itemBuilder: (context, index) {
-                  final m = matches[index];
+                  final MatchModel match = state.matches[index];
 
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     child: ListTile(
-                      title: Text(m.name),
+                      title: Text(match.name),
                       subtitle: Text(
-                        "${m.teamA} vs ${m.teamB}\n${m.matchType} • ${m.court}",
+                        "${match.teamA} vs ${match.teamB}\n${match.court}",
                       ),
                       isThreeLine: true,
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          // Next phase: open Live Match Control
-                        },
-                        child: const Text("Enter"),
-                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                      onTap: () {
+                        // PHASE 4.5 → Match Control
+                      },
                     ),
                   );
                 },
-              ),
-            ),
-          ],
+              );
+            }
+
+            if (state is AdminMatchesError) {
+              return Center(child: Text(state.message));
+            }
+
+            return const SizedBox();
+          },
         ),
       ),
     );

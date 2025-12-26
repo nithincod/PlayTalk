@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../bloc/match_bloc.dart';
+import '../bloc/match_event.dart';
 
 class CreateMatchPage extends StatefulWidget {
-  const CreateMatchPage({super.key});
+  final String tournamentId;
+
+  const CreateMatchPage({
+    super.key,
+    required this.tournamentId,
+  });
 
   @override
   State<CreateMatchPage> createState() => _CreateMatchPageState();
@@ -114,11 +123,18 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Match created (UI only)"),
-                        ),
-                      );
+                      // ✅ REAL MATCH CREATION
+                      context.read<MatchBloc>().add(
+                            CreateMatchEvent(
+                              tournamentId: widget.tournamentId,
+                              name: _matchNameController.text,
+                              teamA: _teamAController.text,
+                              teamB: _teamBController.text,
+                              court: _courtController.text,
+                              matchType: _matchType,
+                            ),
+                          );
+
                       Navigator.pop(context);
                     }
                   },

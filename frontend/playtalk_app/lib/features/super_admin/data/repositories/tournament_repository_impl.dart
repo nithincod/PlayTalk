@@ -12,7 +12,7 @@ class TournamentRepositoryImpl {
     return rawList
         .map(
           (e) => TournamentModel(
-            id: e['tournament_id'],
+            tournamentId: e['tournament_id'],
             name: e['name'],
             sport: e['sport'],
             mode: e['mode'],

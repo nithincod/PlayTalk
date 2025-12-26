@@ -38,7 +38,7 @@ void main() async {
     BlocProvider(
   create: (_) {
     final datasource = TournamentRemoteDatasource(
-      baseUrl: "http://10.0.2.2:3000",
+      baseUrl: "http://192.168.1.9:3000",
       adminId: "-Oh19e8DauETQEhQxB5G",
     );
 
@@ -71,7 +71,7 @@ class PlayTalkApp extends StatelessWidget {
       routes: {
         AppRoutes.roleLoader: (_) => const RoleLoaderPage(),
         AppRoutes.superAdminHome: (_) => const SuperAdminHomePage(),
-        AppRoutes.matchAdminHome: (_) => const MatchAdminHomePage(),
+        AppRoutes.matchAdminHome: (_) => const AdminHomePage(adminId: '-Oh19pD34L67JX0RbCRr',),
         AppRoutes.userHome: (_) => const UserHomePage(),
         AppRoutes.liveMatch: (_) => const LiveMatchPage(), // 👈 YOUR PAGE
       },
