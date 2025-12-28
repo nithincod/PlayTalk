@@ -12,6 +12,7 @@ class CreateMatchEvent extends MatchEvent {
   final String teamB;
   final String court;
   final String matchType;
+  final String status;
 
   CreateMatchEvent({
     required this.tournamentId,
@@ -20,5 +21,6 @@ class CreateMatchEvent extends MatchEvent {
     required this.teamB,
     required this.court,
     required this.matchType,
+    required this.status,
   });
 }

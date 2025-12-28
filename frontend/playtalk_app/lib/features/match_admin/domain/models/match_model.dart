@@ -1,4 +1,6 @@
-class MatchModel {
+import 'package:equatable/equatable.dart';
+
+class MatchModel extends Equatable {
   final String matchId;
   final String name;
   final String teamA;
@@ -6,8 +8,9 @@ class MatchModel {
   final String matchType;
   final String court;
   final String tournamentId;
+  final String status;
 
-  MatchModel({
+  const MatchModel({
     required this.matchId,
     required this.name,
     required this.teamA,
@@ -15,33 +18,31 @@ class MatchModel {
     required this.matchType,
     required this.court,
     required this.tournamentId,
+    required this.status,
   });
 
-  /// 🔹 FROM BACKEND (Firebase / API)
   factory MatchModel.fromJson(Map<String, dynamic> json) {
-  return MatchModel(
-    matchId: json['matchId'] ?? json['match_id'] ?? '',
-    name: json['name'] ?? json['match_name'] ?? '',
-    teamA: json['teamA'] ?? json['team_a'] ?? '',
-    teamB: json['teamB'] ?? json['team_b'] ?? '',
-    matchType: json['matchType'] ?? json['match_type'] ?? '',
-    court: json['court'] ?? json['court_no'] ?? '',
-    tournamentId:
-        json['tournamentId'] ?? json['tournament_id'] ?? '',
-  );
-}
-
-
-  /// 🔹 TO BACKEND (future use)
-  Map<String, dynamic> toJson() {
-    return {
-      'matchId': matchId,
-      'name': name,
-      'teamA': teamA,
-      'teamB': teamB,
-      'matchType': matchType,
-      'court': court,
-      'tournamentId': tournamentId,
-    };
+    return MatchModel(
+      matchId: json['matchId'],
+      name: json['name'] ?? '',
+      teamA: json['teamA'] ?? '',
+      teamB: json['teamB'] ?? '',
+      matchType: json['matchType'] ?? '',
+      court: json['court'] ?? '',
+      tournamentId: json['tournamentId'] ?? '',
+      status: json['status'] ?? 'upcoming',
+    );
   }
+
+  @override
+  List<Object?> get props => [
+        matchId,
+        name,
+        teamA,
+        teamB,
+        matchType,
+        court,
+        tournamentId,
+        status, // 🔥 THIS WAS THE MISSING PIECE
+      ];
 }

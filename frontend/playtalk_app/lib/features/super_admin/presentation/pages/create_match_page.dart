@@ -132,6 +132,7 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
                               teamB: _teamBController.text,
                               court: _courtController.text,
                               matchType: _matchType,
+                              status: "upcoming",
                             ),
                           );
 

@@ -38,7 +38,7 @@ void main() async {
     BlocProvider(
   create: (_) {
     final datasource = TournamentRemoteDatasource(
-      baseUrl: "http://192.168.1.9:3000",
+      baseUrl: "http://192.168.1.6:3000",
       adminId: "-Oh19e8DauETQEhQxB5G",
     );
 

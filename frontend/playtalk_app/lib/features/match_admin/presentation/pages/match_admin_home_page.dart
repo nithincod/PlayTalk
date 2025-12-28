@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:playtalk_app/features/match_admin/presentation/bloc/match_admin_matches_bloc.dart';
 
 import '../../data/datasources/match_admin_matches_remote_datasource.dart';
+import '../../data/datasources/match_lifeycle_remote_datasource.dart';
 import '../../domain/models/match_model.dart';
+
+import '../bloc/match_admin_matches_bloc.dart';
 import '../bloc/match_admin_matches_event.dart';
 import '../bloc/match_admin_matches_state.dart';
+
+import '../bloc/match_lifecycle_bloc.dart';
+import '../bloc/match_lifecycle_event.dart';
+import '../bloc/match_lifecycle_state.dart';
 
 class AdminHomePage extends StatelessWidget {
   final String adminId;
@@ -17,57 +23,139 @@ class AdminHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => AdminMatchesBloc(
-        AdminMatchesRemoteDatasource("http://192.168.1.9:3000"),
-      )..add(LoadAdminMatches(adminId)),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text("My Matches"),
+    return MultiBlocProvider(
+      providers: [
+        // 🔹 Assigned matches list
+        BlocProvider(
+          create: (_) => AdminMatchesBloc(
+            AdminMatchesRemoteDatasource("http://192.168.1.6:3000"),
+          )..add(LoadAdminMatches(adminId)),
         ),
-        body: BlocBuilder<AdminMatchesBloc, AdminMatchesState>(
-          builder: (context, state) {
-            if (state is AdminMatchesLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
 
-            if (state is AdminMatchesLoaded) {
-              if (state.matches.isEmpty) {
-                return const Center(
-                  child: Text("No assigned matches"),
+        // 🔹 Match lifecycle control
+        BlocProvider(
+          create: (_) => MatchLifecycleBloc(
+            MatchLifecycleRemoteDatasource(
+              baseUrl: "http://192.168.1.6:3000",
+              adminId: adminId,
+            ),
+          ),
+        ),
+      ],
+      child: BlocListener<MatchLifecycleBloc, MatchLifecycleState>(
+        listener: (context, state) {
+          if (state is MatchLifecycleSuccess) {
+        // 🔥 THIS IS THE FIX
+        context.read<AdminMatchesBloc>()
+          .add(LoadAdminMatches(adminId));
+      }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text("My Assigned Matches"),
+          ),
+          body: BlocBuilder<AdminMatchesBloc, AdminMatchesState>(
+            builder: (context, state) {
+              if (state is AdminMatchesLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state is AdminMatchesError) {
+                return Center(child: Text(state.message));
+              }
+
+              if (state is AdminMatchesLoaded) {
+                if (state.matches.isEmpty) {
+                  return const Center(
+                    child: Text("No matches assigned"),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.matches.length,
+                  itemBuilder: (context, index) {
+                    final MatchModel match = state.matches[index];
+                    print("MATCH STATUS UI: ${match.status}");
+
+
+                    final bool isUpcoming = match.status == "upcoming";
+                    final bool isLive = match.status == "live";
+                    final bool isFinished = match.status == "finished";
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              match.name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text("${match.teamA} vs ${match.teamB}"),
+                            Text("Court: ${match.court}"),
+                            const SizedBox(height: 8),
+                            Chip(
+                              label: Text(
+                                match.status.toUpperCase(),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              backgroundColor: isUpcoming
+                                  ? Colors.orange
+                                  : isLive
+                                      ? Colors.green
+                                      : Colors.grey,
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: BlocBuilder<MatchLifecycleBloc,
+                                  MatchLifecycleState>(
+                                builder: (context, lifecycleState) {
+                                  return ElevatedButton(
+                                    onPressed: isFinished
+                                        ? null
+                                        : () {
+                                            if (isUpcoming) {
+                                              context
+                                                  .read<MatchLifecycleBloc>()
+                                                  .add(
+                                                    StartMatchPressed(
+                                                      match.tournamentId,
+                                                        match.matchId),
+                                                  );
+                                            } else if (isLive) {
+                                              // PHASE 5.2 → Enter Live Match Control
+                                            }
+                                          },
+                                    child: Text(
+                                      isUpcoming
+                                          ? "Start Match"
+                                          : isLive
+                                              ? "Enter Live Control"
+                                              : "Finished",
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 );
               }
 
-              return ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.matches.length,
-                itemBuilder: (context, index) {
-                  final MatchModel match = state.matches[index];
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      title: Text(match.name),
-                      subtitle: Text(
-                        "${match.teamA} vs ${match.teamB}\n${match.court}",
-                      ),
-                      isThreeLine: true,
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                      onTap: () {
-                        // PHASE 4.5 → Match Control
-                      },
-                    ),
-                  );
-                },
-              );
-            }
-
-            if (state is AdminMatchesError) {
-              return Center(child: Text(state.message));
-            }
-
-            return const SizedBox();
-          },
+              return const SizedBox();
+            },
+          ),
         ),
       ),
     );

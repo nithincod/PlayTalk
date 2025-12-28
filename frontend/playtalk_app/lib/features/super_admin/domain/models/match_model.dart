@@ -5,7 +5,8 @@ class MatchModel {
   final String teamB;
   final String matchType;
   final String court;
-  final String? tournamentId;
+  final String tournamentId;
+  final String status;
 
   MatchModel({
     required this.matchId,
@@ -14,18 +15,21 @@ class MatchModel {
     required this.teamB,
     required this.matchType,
     required this.court,
-    this.tournamentId,
+    required this.tournamentId,
+    required this.status,
   });
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
     return MatchModel(
-      matchId: json['matchId'] ?? '',
+      matchId: json['matchId'],
       name: json['name'] ?? '',
       teamA: json['teamA'] ?? '',
       teamB: json['teamB'] ?? '',
       matchType: json['matchType'] ?? '',
       court: json['court'] ?? '',
-      tournamentId: json['tournamentId'], // OPTIONAL
+      tournamentId: json['tournamentId'] ?? '',
+      status: json['status'] ?? 'upcoming',
     );
   }
 }
+

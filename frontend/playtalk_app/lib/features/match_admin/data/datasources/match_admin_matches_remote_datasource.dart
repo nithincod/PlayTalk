@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../domain/models/match_model.dart';
+import 'package:playtalk_app/features/match_admin/domain/models/match_model.dart';
+
+
 
 class AdminMatchesRemoteDatasource {
   final String baseUrl;
@@ -23,7 +25,14 @@ class AdminMatchesRemoteDatasource {
       throw Exception("Failed to load assigned matches");
     }
 
-    final List<dynamic> data = jsonDecode(response.body);
+    final List data = jsonDecode(response.body);
+
+   for (final m in data) {
+  print("RAW JSON STATUS: ${m['status']}");
+   }
+
+
+    // final List<dynamic> data2 = jsonDecode(response.body);
 
     return data.map((json) {
       return MatchModel(
@@ -33,7 +42,8 @@ class AdminMatchesRemoteDatasource {
         teamB: json['teamB'],
         matchType: json['matchType'],
         court: json['court'],
-        tournamentId: json['tournamentId'],
+        tournamentId: json['tournamentId'], 
+        status: json['status'] ?? 'upcoming', 
       );
     }).toList();
   }
