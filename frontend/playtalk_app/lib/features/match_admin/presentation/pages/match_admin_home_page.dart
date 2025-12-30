@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playtalk_app/features/match_admin/data/datasources/live_match_remote_datasource.dart';
+import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
+import 'package:playtalk_app/features/match_admin/presentation/bloc/live_match_bloc.dart';
 import 'package:playtalk_app/features/match_admin/presentation/bloc/match_event_bloc.dart';
 
 import 'package:playtalk_app/features/match_admin/presentation/pages/live_match_page.dart';
@@ -7,7 +10,6 @@ import 'package:playtalk_app/features/match_admin/presentation/pages/live_match_
 import '../../data/datasources/match_admin_matches_remote_datasource.dart';
 import '../../data/datasources/match_event_remote_datasource.dart';
 import '../../data/datasources/match_lifeycle_remote_datasource.dart';
-import '../../domain/models/match_model.dart';
 
 import '../bloc/match_admin_matches_bloc.dart';
 import '../bloc/match_admin_matches_event.dart';
@@ -79,7 +81,7 @@ class AdminHomePage extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: state.matches.length,
                   itemBuilder: (context, index) {
-                    final MatchModel match = state.matches[index];
+                    final MatchAdminModel match = state.matches[index];
                     print("MATCH STATUS UI: ${match.status}");
 
 
@@ -140,6 +142,13 @@ class AdminHomePage extends StatelessWidget {
   MaterialPageRoute(
     builder: (_) => MultiBlocProvider(
       providers: [
+        // 🔹 LIVE MATCH BLOC (Firebase real-time listener) ✅ REQUIRED
+        BlocProvider(
+          create: (_) => LiveMatchBloc(
+            LiveMatchRemoteDatasource(),
+          ),
+        ),
+
         // 🔹 Match Event Bloc (submit events)
         BlocProvider(
           create: (_) => MatchEventBloc(
@@ -150,7 +159,7 @@ class AdminHomePage extends StatelessWidget {
           ),
         ),
 
-        // 🔹 Match Lifecycle Bloc (optional if used inside)
+        // 🔹 Match Lifecycle Bloc (optional)
         BlocProvider(
           create: (_) => MatchLifecycleBloc(
             MatchLifecycleRemoteDatasource(
@@ -161,12 +170,12 @@ class AdminHomePage extends StatelessWidget {
         ),
       ],
       child: LiveMatchPage(
-        
         match: match,
       ),
     ),
   ),
 );
+
 
                                             }
                                           },

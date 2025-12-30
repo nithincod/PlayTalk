@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
+
+import '../bloc/live_match_bloc.dart';
+import '../bloc/live_match_event.dart';
+import '../bloc/live_match_state.dart';
 
 import '../bloc/match_event_bloc.dart';
 import '../bloc/match_event_event.dart';
 import '../bloc/match_event_state.dart';
-import '../../domain/models/match_model.dart';
 
 class LiveMatchPage extends StatelessWidget {
-  final MatchModel match;
+  final MatchAdminModel match;
 
   const LiveMatchPage({
     super.key,
@@ -16,6 +20,15 @@ class LiveMatchPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 🔥 START REAL-TIME LISTENING
+    context.read<LiveMatchBloc>().add(
+          StartListeningMatch(
+            collegeId: match.collegeId,
+            tournamentId: match.tournamentId,
+            matchId: match.matchId,
+          ),
+        );
+
     return Scaffold(
       appBar: AppBar(
         title: Text("${match.name} (LIVE)"),
@@ -27,33 +40,50 @@ class LiveMatchPage extends StatelessWidget {
               SnackBar(content: Text(state.message)),
             );
           }
-          if(state is MatchEventSuccess) {
+
+          if (state is MatchEventSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Event submitted successfully")),
+              const SnackBar(
+                content: Text("Event submitted successfully"),
+              ),
             );
           }
         },
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _matchHeader(match),
-              const SizedBox(height: 16),
-              _scoreSection(match),
-              const SizedBox(height: 24),
-              _actionButtons(context, match),
-              const SizedBox(height: 24),
-              _eventTimeline(),
-            ],
-          ),
+        child: BlocBuilder<LiveMatchBloc, LiveMatchState>(
+          builder: (context, state) {
+            if (state is LiveMatchLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state is LiveMatchUpdated) {
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _matchHeader(match),
+                    const SizedBox(height: 16),
+                    _scoreSection(state.score),
+                    const SizedBox(height: 24),
+                    _actionButtons(context, match),
+                    const SizedBox(height: 24),
+                    _eventTimeline(state.events),
+                  ],
+                ),
+              );
+            }
+
+            return const Center(
+              child: Text("Failed to load match"),
+            );
+          },
         ),
       ),
     );
   }
 
   // 🔹 HEADER
-  Widget _matchHeader(MatchModel match) {
+  Widget _matchHeader(MatchAdminModel match) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -64,32 +94,55 @@ class LiveMatchPage extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        Text("Sport: ${match.matchType}"),
+        Text("Sport: ${match.sport}"),
+        const SizedBox(height: 6),
         const Chip(
-          label: Text("LIVE", style: TextStyle(color: Colors.white)),
+          label: Text(
+            "LIVE",
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: Colors.green,
         ),
       ],
     );
   }
 
-  // 🔹 SCORE (READ-ONLY)
-  Widget _scoreSection(MatchModel match) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        color: Colors.grey.shade200,
-      ),
-      child: const Text(
-        "Score will be derived from events",
-        style: TextStyle(fontStyle: FontStyle.italic),
-      ),
-    );
-  }
+  // 🔹 LIVE SCORE
+  Widget _scoreSection(Map<String, dynamic> score) {
+  final currentSet = score['currentSet'] ?? {};
+
+  final a = currentSet['A'] ?? 0;
+  final b = currentSet['B'] ?? 0;
+
+  return Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.grey.shade200,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Current Set: $a - $b",
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "Sets: ${score['setsA'] ?? 0} - ${score['setsB'] ?? 0}",
+          style: const TextStyle(fontSize: 16),
+        ),
+      ],
+    ),
+  );
+}
+
 
   // 🔹 ACTION BUTTONS (SPORT AWARE)
-  Widget _actionButtons(BuildContext context, MatchModel match) {
+  Widget _actionButtons(BuildContext context, MatchAdminModel match) {
     switch (match.sport.toLowerCase()) {
       case "badminton":
         return _badmintonButtons(context, match);
@@ -102,8 +155,8 @@ class LiveMatchPage extends StatelessWidget {
     }
   }
 
-  // 🏸 BADMINTON / TT
-  Widget _badmintonButtons(BuildContext context, MatchModel match) {
+  // 🏸 BADMINTON
+  Widget _badmintonButtons(BuildContext context, MatchAdminModel match) {
     return Column(
       children: [
         Row(
@@ -151,7 +204,7 @@ class LiveMatchPage extends StatelessWidget {
   }
 
   // 🤼 KABADDI
-  Widget _kabaddiButtons(BuildContext context, MatchModel match) {
+  Widget _kabaddiButtons(BuildContext context, MatchAdminModel match) {
     return Column(
       children: [
         ElevatedButton(
@@ -178,10 +231,10 @@ class LiveMatchPage extends StatelessWidget {
     );
   }
 
-  // 🔹 EVENT SENDER
+  // 🔹 SEND EVENT TO BACKEND
   void _sendEvent(
     BuildContext context,
-    MatchModel match, {
+    MatchAdminModel match, {
     required String type,
     required String team,
     required int value,
@@ -195,20 +248,35 @@ class LiveMatchPage extends StatelessWidget {
               "team": team,
               "value": value,
               "meta": {},
-              "timestamp": DateTime.now().millisecondsSinceEpoch,
             },
           ),
         );
   }
 
-  // 🔹 TIMELINE (NEXT PHASE REAL-TIME)
-  Widget _eventTimeline() {
-    return const Expanded(
-      child: Center(
-        child: Text(
-          "Event timeline will appear here",
-          style: TextStyle(color: Colors.grey),
+  // 🔹 EVENT TIMELINE
+  Widget _eventTimeline(List<dynamic> events) {
+    if (events.isEmpty) {
+      return const Expanded(
+        child: Center(
+          child: Text(
+            "No events yet",
+            style: TextStyle(color: Colors.grey),
+          ),
         ),
+      );
+    }
+
+    return Expanded(
+      child: ListView.builder(
+        itemCount: events.length,
+        itemBuilder: (context, index) {
+          final e = events[index];
+          return ListTile(
+            dense: true,
+            title: Text("${e['type']} - ${e['team']}"),
+            trailing: Text("+${e['value']}"),
+          );
+        },
       ),
     );
   }

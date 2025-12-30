@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../domain/models/match_model.dart';
+import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
 
 abstract class AdminMatchesState extends Equatable {
   const AdminMatchesState();
@@ -13,7 +13,7 @@ class AdminMatchesInitial extends AdminMatchesState {}
 class AdminMatchesLoading extends AdminMatchesState {}
 
 class AdminMatchesLoaded extends AdminMatchesState {
-  final List<MatchModel> matches;
+  final List<MatchAdminModel> matches;
 
   const AdminMatchesLoaded(this.matches);
 

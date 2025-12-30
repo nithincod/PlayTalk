@@ -1,37 +1,37 @@
-import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../../data/datasources/live_match_remote_datasource.dart';
 import 'live_match_event.dart';
 import 'live_match_state.dart';
 
 class LiveMatchBloc extends Bloc<LiveMatchEvent, LiveMatchState> {
   final LiveMatchRemoteDatasource datasource;
-  StreamSubscription? _sub;
 
   LiveMatchBloc(this.datasource) : super(LiveMatchLoading()) {
-    on<StartListeningMatch>((event, emit) async {
-      _sub?.cancel();
-
-      _sub = datasource
-          .listenMatch(
-            event.tournamentId,
-            event.matchId,
-          )
-          .listen((data) {
-        emit(
-          LiveMatchUpdated(
-            match: data['match'],
-            score: data['score'],
-            events: data['events'],
-          ),
-        );
-      });
-    });
+    on<StartListeningMatch>(_onStartListeningMatch);
   }
 
-  @override
-  Future<void> close() {
-    _sub?.cancel();
-    return super.close();
+  Future<void> _onStartListeningMatch(
+    StartListeningMatch event,
+    Emitter<LiveMatchState> emit,
+  ) async {
+    // 🔥 Correct way to bind a stream to bloc lifecycle
+    await emit.forEach<Map<String, dynamic>>(
+      datasource.listenMatch(
+        event.collegeId,
+        event.tournamentId,
+        event.matchId,
+      ),
+      onData: (data) {
+        return LiveMatchUpdated(
+          match: Map<String, dynamic>.from(data['match']),
+          score: Map<String, dynamic>.from(data['score']),
+          events: List<Map<String, dynamic>>.from(data['events']),
+        );
+      },
+      onError: (error, stackTrace) {
+        return LiveMatchError(error.toString());
+      },
+    );
   }
 }

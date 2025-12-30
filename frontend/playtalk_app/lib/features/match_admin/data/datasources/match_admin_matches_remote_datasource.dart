@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:playtalk_app/features/match_admin/domain/models/match_model.dart';
+import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
+
 
 
 
@@ -9,7 +10,7 @@ class AdminMatchesRemoteDatasource {
 
   AdminMatchesRemoteDatasource(this.baseUrl);
 
-  Future<List<MatchModel>> getAssignedMatches(String adminId) async {
+  Future<List<MatchAdminModel>> getAssignedMatches(String adminId) async {
     final response = await http.get(
       Uri.parse("$baseUrl/admin/assigned-matches"), // ✅ FIXED
       headers: {
@@ -35,8 +36,9 @@ class AdminMatchesRemoteDatasource {
     // final List<dynamic> data2 = jsonDecode(response.body);
 
     return data.map((json) {
-      return MatchModel(
+      return MatchAdminModel(
         matchId: json['matchId'],
+        collegeId: json['collegeId'],
         name: json['name'],
         teamA: json['teamA'],
         teamB: json['teamB'],

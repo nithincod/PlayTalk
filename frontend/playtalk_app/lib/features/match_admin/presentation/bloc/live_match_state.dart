@@ -5,7 +5,7 @@ class LiveMatchLoading extends LiveMatchState {}
 class LiveMatchUpdated extends LiveMatchState {
   final Map<String, dynamic> match;
   final Map<String, dynamic> score;
-  final List<dynamic> events;
+  final List<Map<String, dynamic>> events;
 
   LiveMatchUpdated({
     required this.match,
@@ -13,6 +13,7 @@ class LiveMatchUpdated extends LiveMatchState {
     required this.events,
   });
 }
+
 
 class LiveMatchError extends LiveMatchState {
   final String message;
