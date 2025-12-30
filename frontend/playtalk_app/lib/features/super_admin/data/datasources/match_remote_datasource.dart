@@ -39,6 +39,7 @@ class MatchRemoteDatasource {
     required String teamB,
     required String court,
     required String matchType,
+    required String sport,
   }) async {
     final response = await http.post(
       Uri.parse(
@@ -54,6 +55,7 @@ class MatchRemoteDatasource {
         "teamB": teamB,
         "court": court,
         "matchType": matchType,
+        "sport": sport,
       }),
     );
 

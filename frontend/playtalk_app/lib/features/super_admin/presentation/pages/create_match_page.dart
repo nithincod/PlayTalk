@@ -24,7 +24,9 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
   final TextEditingController _teamBController = TextEditingController();
   final TextEditingController _courtController = TextEditingController();
 
+
   String _matchType = "Singles";
+  String _selectedSport = "Badminton";
 
   @override
   Widget build(BuildContext context) {
@@ -98,6 +100,25 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
 
               const SizedBox(height: 16),
 
+              DropdownButtonFormField<String>(
+  value: _selectedSport, // Use the string variable
+  decoration: const InputDecoration(
+    labelText: "Sport Type",
+    border: OutlineInputBorder(),
+  ),
+  items: const [
+    DropdownMenuItem(value: "Badminton", child: Text("Badminton")),
+    DropdownMenuItem(value: "Kabaddi", child: Text("Kabaddi")),
+  ],
+  onChanged: (value) {
+    setState(() {
+      _selectedSport = value!; // Update the string variable
+    });
+  },
+),
+
+              const SizedBox(height: 16),
+
               // Match Type
               DropdownButtonFormField<String>(
                 value: _matchType,
@@ -132,7 +153,8 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
                               teamB: _teamBController.text,
                               court: _courtController.text,
                               matchType: _matchType,
-                              status: "upcoming",
+                              status: "upcoming", 
+                              sport: _selectedSport,
                             ),
                           );
 

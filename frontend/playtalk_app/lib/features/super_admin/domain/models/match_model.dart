@@ -1,5 +1,6 @@
 class MatchModel {
   final String matchId;
+  final String sport;
   final String name;
   final String teamA;
   final String teamB;
@@ -10,6 +11,7 @@ class MatchModel {
 
   MatchModel({
     required this.matchId,
+    required this.sport,
     required this.name,
     required this.teamA,
     required this.teamB,
@@ -28,7 +30,8 @@ class MatchModel {
       matchType: json['matchType'] ?? '',
       court: json['court'] ?? '',
       tournamentId: json['tournamentId'] ?? '',
-      status: json['status'] ?? 'upcoming',
+      status: json['status'] ?? 'upcoming', 
+      sport: json['sport'] ?? '',
     );
   }
 }

@@ -44,6 +44,7 @@ class AdminMatchesRemoteDatasource {
         court: json['court'],
         tournamentId: json['tournamentId'], 
         status: json['status'] ?? 'upcoming', 
+        sport: json['sport'] ?? '',
       );
     }).toList();
   }

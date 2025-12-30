@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playtalk_app/features/match_admin/presentation/bloc/match_event_bloc.dart';
+
+import 'package:playtalk_app/features/match_admin/presentation/pages/live_match_page.dart';
 
 import '../../data/datasources/match_admin_matches_remote_datasource.dart';
+import '../../data/datasources/match_event_remote_datasource.dart';
 import '../../data/datasources/match_lifeycle_remote_datasource.dart';
 import '../../domain/models/match_model.dart';
 
@@ -131,7 +135,39 @@ class AdminHomePage extends StatelessWidget {
                                                         match.matchId),
                                                   );
                                             } else if (isLive) {
-                                              // PHASE 5.2 → Enter Live Match Control
+                                              Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => MultiBlocProvider(
+      providers: [
+        // 🔹 Match Event Bloc (submit events)
+        BlocProvider(
+          create: (_) => MatchEventBloc(
+            MatchEventRemoteDatasource(
+              baseUrl: "http://192.168.1.6:3000",
+              adminId: adminId,
+            ),
+          ),
+        ),
+
+        // 🔹 Match Lifecycle Bloc (optional if used inside)
+        BlocProvider(
+          create: (_) => MatchLifecycleBloc(
+            MatchLifecycleRemoteDatasource(
+              baseUrl: "http://192.168.1.6:3000",
+              adminId: adminId,
+            ),
+          ),
+        ),
+      ],
+      child: LiveMatchPage(
+        
+        match: match,
+      ),
+    ),
+  ),
+);
+
                                             }
                                           },
                                     child: Text(

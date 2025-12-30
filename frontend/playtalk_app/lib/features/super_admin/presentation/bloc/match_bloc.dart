@@ -33,7 +33,8 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
           teamA: event.teamA,
           teamB: event.teamB,
           court: event.court,
-          matchType: event.matchType,
+          matchType: event.matchType, 
+          sport: event.sport,
         );
 
         add(LoadMatches(event.tournamentId));

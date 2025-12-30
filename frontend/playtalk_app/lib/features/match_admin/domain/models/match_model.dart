@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class MatchModel extends Equatable {
   final String matchId;
+  final String sport;
   final String name;
   final String teamA;
   final String teamB;
@@ -11,6 +12,7 @@ class MatchModel extends Equatable {
   final String status;
 
   const MatchModel({
+    required this.sport,
     required this.matchId,
     required this.name,
     required this.teamA,
@@ -30,7 +32,8 @@ class MatchModel extends Equatable {
       matchType: json['matchType'] ?? '',
       court: json['court'] ?? '',
       tournamentId: json['tournamentId'] ?? '',
-      status: json['status'] ?? 'upcoming',
+      status: json['status'] ?? 'upcoming', 
+      sport: json['sport'] ?? '',
     );
   }
 
@@ -43,6 +46,7 @@ class MatchModel extends Equatable {
         matchType,
         court,
         tournamentId,
-        status, // 🔥 THIS WAS THE MISSING PIECE
+        status,// 🔥 THIS WAS THE MISSING PIECE
+        sport, 
       ];
 }
