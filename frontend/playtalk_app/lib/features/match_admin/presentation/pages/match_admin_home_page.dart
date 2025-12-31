@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:playtalk_app/features/match_admin/data/datasources/live_match_remote_datasource.dart';
-import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
-import 'package:playtalk_app/features/match_admin/presentation/bloc/live_match_bloc.dart';
-import 'package:playtalk_app/features/match_admin/presentation/bloc/match_event_bloc.dart';
 
-import 'package:playtalk_app/features/match_admin/presentation/pages/live_match_page.dart';
-
+import '../../data/datasources/live_match_remote_datasource.dart';
 import '../../data/datasources/match_admin_matches_remote_datasource.dart';
 import '../../data/datasources/match_event_remote_datasource.dart';
 import '../../data/datasources/match_lifeycle_remote_datasource.dart';
+
+import '../../domain/models/match_admin_model.dart';
+
+import '../bloc/live_match_bloc.dart';
+import '../bloc/match_event_bloc.dart';
 
 import '../bloc/match_admin_matches_bloc.dart';
 import '../bloc/match_admin_matches_event.dart';
@@ -18,6 +18,8 @@ import '../bloc/match_admin_matches_state.dart';
 import '../bloc/match_lifecycle_bloc.dart';
 import '../bloc/match_lifecycle_event.dart';
 import '../bloc/match_lifecycle_state.dart';
+
+import 'live_match_page.dart';
 
 class AdminHomePage extends StatelessWidget {
   final String adminId;
@@ -38,7 +40,7 @@ class AdminHomePage extends StatelessWidget {
           )..add(LoadAdminMatches(adminId)),
         ),
 
-        // 🔹 Match lifecycle control
+        // 🔹 SINGLE MatchLifecycleBloc (shared everywhere)
         BlocProvider(
           create: (_) => MatchLifecycleBloc(
             MatchLifecycleRemoteDatasource(
@@ -51,10 +53,11 @@ class AdminHomePage extends StatelessWidget {
       child: BlocListener<MatchLifecycleBloc, MatchLifecycleState>(
         listener: (context, state) {
           if (state is MatchLifecycleSuccess) {
-        // 🔥 THIS IS THE FIX
-        context.read<AdminMatchesBloc>()
-          .add(LoadAdminMatches(adminId));
-      }
+            // 🔥 Reload matches after start/end
+            context.read<AdminMatchesBloc>().add(
+                  LoadAdminMatches(adminId),
+                );
+          }
         },
         child: Scaffold(
           appBar: AppBar(
@@ -82,8 +85,6 @@ class AdminHomePage extends StatelessWidget {
                   itemCount: state.matches.length,
                   itemBuilder: (context, index) {
                     final MatchAdminModel match = state.matches[index];
-                    print("MATCH STATUS UI: ${match.status}");
-
 
                     final bool isUpcoming = match.status == "upcoming";
                     final bool isLive = match.status == "live";
@@ -121,73 +122,69 @@ class AdminHomePage extends StatelessWidget {
                             const SizedBox(height: 8),
                             SizedBox(
                               width: double.infinity,
-                              child: BlocBuilder<MatchLifecycleBloc,
-                                  MatchLifecycleState>(
-                                builder: (context, lifecycleState) {
-                                  return ElevatedButton(
-                                    onPressed: isFinished
-                                        ? null
-                                        : () {
-                                            if (isUpcoming) {
-                                              context
-                                                  .read<MatchLifecycleBloc>()
-                                                  .add(
-                                                    StartMatchPressed(
-                                                      match.tournamentId,
-                                                        match.matchId),
-                                                  );
-                                            } else if (isLive) {
-                                              Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => MultiBlocProvider(
-      providers: [
-        // 🔹 LIVE MATCH BLOC (Firebase real-time listener) ✅ REQUIRED
-        BlocProvider(
-          create: (_) => LiveMatchBloc(
-            LiveMatchRemoteDatasource(),
-          ),
-        ),
+                              child: ElevatedButton(
+                                onPressed: isFinished
+                                    ? null
+                                    : () {
+                                        if (isUpcoming) {
+                                          // ▶️ START MATCH
+                                          context
+                                              .read<MatchLifecycleBloc>()
+                                              .add(
+                                                StartMatchPressed(
+                                                  match.tournamentId,
+                                                  match.matchId,
+                                                ),
+                                              );
+                                        } else if (isLive) {
+                                          // 🔴 ENTER LIVE MATCH
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  MultiBlocProvider(
+                                                providers: [
+                                                  // 🔹 Live realtime listener
+                                                  BlocProvider(
+                                                    create: (_) =>
+                                                        LiveMatchBloc(
+                                                      LiveMatchRemoteDatasource(),
+                                                    ),
+                                                  ),
 
-        // 🔹 Match Event Bloc (submit events)
-        BlocProvider(
-          create: (_) => MatchEventBloc(
-            MatchEventRemoteDatasource(
-              baseUrl: "http://192.168.1.6:3000",
-              adminId: adminId,
-            ),
-          ),
-        ),
+                                                  // 🔹 Submit scoring events
+                                                  BlocProvider(
+                                                    create: (_) =>
+                                                        MatchEventBloc(
+                                                      MatchEventRemoteDatasource(
+                                                        baseUrl:
+                                                            "http://192.168.1.6:3000",
+                                                        adminId: adminId,
+                                                      ),
+                                                    ),
+                                                  ),
 
-        // 🔹 Match Lifecycle Bloc (optional)
-        BlocProvider(
-          create: (_) => MatchLifecycleBloc(
-            MatchLifecycleRemoteDatasource(
-              baseUrl: "http://192.168.1.6:3000",
-              adminId: adminId,
-            ),
-          ),
-        ),
-      ],
-      child: LiveMatchPage(
-        match: match,
-      ),
-    ),
-  ),
-);
-
-
-                                            }
-                                          },
-                                    child: Text(
-                                      isUpcoming
-                                          ? "Start Match"
-                                          : isLive
-                                              ? "Enter Live Control"
-                                              : "Finished",
-                                    ),
-                                  );
-                                },
+                                                  // 🔥 PASS SAME MatchLifecycleBloc
+                                                  BlocProvider.value(
+                                                    value: context.read<
+                                                        MatchLifecycleBloc>(),
+                                                  ),
+                                                ],
+                                                child: LiveMatchPage(
+                                                  match: match,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                child: Text(
+                                  isUpcoming
+                                      ? "Start Match"
+                                      : isLive
+                                          ? "Enter Live Control"
+                                          : "Finished",
+                                ),
                               ),
                             ),
                           ],

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 class MatchLifecycleRemoteDatasource {
   final String baseUrl;
@@ -23,18 +24,26 @@ class MatchLifecycleRemoteDatasource {
     }
   }
 
-  Future<void> endMatch(String matchId) async {
-    final response = await http.post(
-      Uri.parse("$baseUrl/admin/match/$matchId/end"),
-      headers: {
-        "x-admin-id": adminId,
-      },
-    );
+  Future<void> endMatch({
+  required String matchId,
+  required String tournamentId,
+}) async {
+  final response = await http.post(
+    Uri.parse("$baseUrl/admin/match/$matchId/end"),
+    headers: {
+      "x-admin-id": adminId,
+      "Content-Type": "application/json",
+    },
+    body: jsonEncode({
+      "tournamentId": tournamentId,
+    }),
+  );
 
-    if (response.statusCode != 200) {
-      throw Exception("Failed to end match");
-    }
+  if (response.statusCode != 200) {
+    throw Exception("Failed to end match");
   }
+}
+
 }
 
 

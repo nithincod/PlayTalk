@@ -6,3 +6,12 @@ class StartMatchPressed extends MatchLifecycleEvent {
 
   StartMatchPressed(this.tournamentId, this.matchId);
 }
+
+class EndMatchPressed extends MatchLifecycleEvent {
+  final String matchId;
+  final String tournamentId;
+
+  EndMatchPressed(this.matchId, this.tournamentId);
+}
+
+

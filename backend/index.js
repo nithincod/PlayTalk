@@ -1,25 +1,22 @@
 import express from "express";
 import cors from "cors";
 import axios from "axios";
-import admin from "firebase-admin";
-import fs from "fs";
 import dotenv from "dotenv";
+
+import "./config/firebase.js";
+
+import { db } from "./config/firebase.js";
+
+import matcheventsRouter from "./routes/match_events.routes.js";
+
+dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-dotenv.config();
+app.use(matcheventsRouter);
 
-const serviceAccount = JSON.parse(
-  fs.readFileSync("./firebase-key.json", "utf8")
-);
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: "https://playtalk-5df80-default-rtdb.firebaseio.com"
-});
-
-const db = admin.database();
 
 // ================================
 // ✅ AI HELPER FUNCTION (MUST BE ABOVE ROUTES)
@@ -274,36 +271,93 @@ app.post("/system/create-match", async (req, res) => {
   res.json({ message: "Match created", match_id: ref.key });
 });
 
-app.post(
-  "/admin/create-match",
+
+
+app.get(
+  "/admin/tournament/:tournamentId/matches",
   adminAuth,
-  requireSuperAdmin,
   async (req, res) => {
-    const {
-      sport,
-      participant_type,
-      participantA,
-      participantB
-    } = req.body;
+    const { tournamentId } = req.params;
+    const { college_id } = req.admin;
 
-    const college_id = req.admin.college_id;
+    const snap = await db
+      .ref(`tournaments/${college_id}/${tournamentId}/matches`)
+      .once("value");
 
-    const ref = db.ref(`matches/${college_id}`).push();
+    if (!snap.exists()) return res.json([]);
 
-    await ref.set({
-      match_id: ref.key,
-      sport,
-      participant_type,
-      participantA,
-      participantB,
-      status: "upcoming",
-      assigned_admin: null,
-      created_at: Date.now()
-    });
-
-    res.json({ message: "Match created", match_id: ref.key });
+    const matches = Object.values(snap.val());
+    res.json(matches);
   }
 );
+
+
+app.post(
+  "/admin/tournament/:tournamentId/create-match",
+  adminAuth,
+  async (req, res) => {
+    const { tournamentId } = req.params;
+    const { name, teamA, teamB, court, matchType, sport } = req.body;
+
+    if (!name || !teamA || !teamB) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    const { college_id } = req.admin;
+
+    const ref = db
+      .ref(`tournaments/${college_id}/${tournamentId}/matches`)
+      .push();
+
+    const match = {
+      matchId: ref.key,
+      name,
+      teamA,
+      teamB,
+      court,
+      matchType,
+      sport,
+      status: "upcoming",
+      startedAt: null,
+      endedAt: null,
+      createdAt: Date.now(),
+    };
+
+    await ref.set(match);
+
+    res.json(match);
+  }
+);
+
+app.post(
+  "/admin/tournament/:tournamentId/match/:matchId/assign-admin",
+  adminAuth,
+  async (req, res) => {
+    const { tournamentId, matchId } = req.params;
+    const { adminId, adminName } = req.body;
+    const { college_id } = req.admin;
+
+    if (!adminId || !adminName) {
+      return res.status(400).json({ error: "Missing admin data" });
+    }
+
+    const assignPath = `tournaments/${college_id}/${tournamentId}/matches/${matchId}/assigned_admin`;
+
+    console.log("WRITING TO:", assignPath);
+
+    await db.ref(assignPath).set({
+      adminId,
+      adminName,
+      assignedAt: Date.now(),
+    });
+
+    return res.json({
+      message: "Admin assigned successfully",
+      path: assignPath,
+    });
+  }
+);
+
 
 
 app.post("/system/create-tournament", async (req, res) => {
@@ -333,27 +387,47 @@ app.post(
     const { name, sport, mode } = req.body;
     const college_id = req.admin.college_id;
 
-    // ✅ VALIDATION
     if (!name || !sport || !mode) {
-      return res.status(400).json({
-        error: "Missing required fields: name, sport, mode"
-      });
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const ref = db.ref(`tournaments/${college_id}`).push();
 
-    await ref.set({
+    const tournament = {
       tournament_id: ref.key,
       name,
       sport,
       mode,
-      created_at: Date.now()
-    });
+      created_at: Date.now(),
+    };
+
+    await ref.set(tournament);
 
     res.json({
       message: "Tournament created",
-      tournament_id: ref.key
+      tournament,
     });
+  }
+);
+
+app.get(
+  "/admin/tournaments",
+  adminAuth,
+  requireSuperAdmin,
+  async (req, res) => {
+    const college_id = req.admin.college_id;
+
+    const snapshot = await db
+      .ref(`tournaments/${college_id}`)
+      .once("value");
+
+    const tournaments = [];
+
+    snapshot.forEach((child) => {
+      tournaments.push(child.val());
+    });
+
+    res.json(tournaments);
   }
 );
 
@@ -380,6 +454,48 @@ app.post(
   }
 );
 
+// ================================
+// ASSIGN MATCH ADMIN (SUPER ADMIN)
+// ================================
+app.post("/superadmin/assign-match-admin", async (req, res) => {
+  console.log("RAW BODY:", req.body);
+
+  const { match_id, admin_id: adminId, adminName } = req.body;
+
+  console.log("PARSED:", match_id, adminId, adminName);
+
+  if (!match_id || !adminId || !adminName) {
+    return res.status(400).json({
+      error: "Missing required fields",
+      received: req.body,
+    });
+  }
+
+  try {
+    const updates = {};
+
+    updates[`matches/${match_id}/assigned_admin`] = {
+      adminId,
+      adminName,
+      assignedAt: Date.now(),
+    };
+
+    updates[`admins/${adminId}/assigned_matches/${match_id}`] = true;
+
+    await db.ref().update(updates);
+
+    return res.json({
+      message: "Match admin assigned successfully",
+    });
+  } catch (error) {
+    console.error("FIREBASE ERROR:", error);
+    return res.status(500).json({ error: "Firebase update failed" });
+  }
+});
+
+
+
+
 app.get(
   "/admin/my-matches",
   adminAuth,
@@ -402,7 +518,177 @@ app.get(
   }
 );
 
+app.get(
+  "/match-admin/my-matches",
+  adminAuth,
+  requireMatchAdmin,
+  async (req, res) => {
+    const admin_id = req.admin.admin_id;
 
+    const snapshot = await db
+      .ref(`admins/${admin_id}/assigned_matches`)
+      .once("value");
+
+    const matchIds = snapshot.val() ?? {};
+    const matches = [];
+
+    for (const matchId of Object.keys(matchIds)) {
+      const matchSnap = await db
+        .ref(`matches/${matchId}`)
+        .once("value");
+      matches.push(matchSnap.val());
+    }
+
+    res.json(matches);
+  }
+);
+
+// ================================
+// 🔹 ADMIN: GET ASSIGNED MATCHES
+// ================================
+app.get("/admin/assigned-matches", adminAuth, async (req, res) => {
+  try {
+    const adminId = req.headers["x-admin-id"];
+    const collegeId = req.admin.college_id;
+
+    const tournamentsSnap = await db
+      .ref(`tournaments/${collegeId}`)
+      .once("value");
+
+    if (!tournamentsSnap.exists()) {
+      return res.json([]);
+    }
+
+    const assignedMatches = [];
+
+    const tournaments = tournamentsSnap.val();
+
+    for (const tournamentId in tournaments) {
+      const matches = tournaments[tournamentId].matches;
+      if (!matches) continue;
+
+      for (const matchId in matches) {
+        const match = matches[matchId];
+
+        if (match.assigned_admin?.adminId === adminId) {
+          assignedMatches.push({
+            ...match,
+            status: match.status || "upcoming",
+            matchId,
+            tournamentId,
+            collegeId,
+          });
+        }
+      }
+    }
+
+    return res.json(assignedMatches);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch matches" });
+  }
+});
+
+
+
+app.post("/admin/match/:matchId/start", adminAuth, async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const adminId = req.headers["x-admin-id"];
+    const collegeId = req.admin.college_id;
+
+    // 🔍 Find match inside all tournaments of this college
+    const tournamentsSnap = await db
+      .ref(`tournaments/${collegeId}`)
+      .once("value");
+
+    if (!tournamentsSnap.exists()) {
+      return res.status(404).json({ error: "No tournaments found" });
+    }
+
+    let matchRef = null;
+    let matchData = null;
+
+    tournamentsSnap.forEach((tournamentSnap) => {
+      const matchesSnap = tournamentSnap.child("matches");
+      matchesSnap.forEach((mSnap) => {
+        if (mSnap.key === matchId) {
+          matchRef = mSnap.ref;
+          matchData = mSnap.val();
+        }
+      });
+    });
+
+    if (!matchRef || !matchData) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    // 🔐 Authorization
+    if (matchData.assigned_admin?.adminId !== adminId) {
+      return res.status(403).json({ error: "Not assigned admin" });
+    }
+
+    // 🔁 State validation
+    if (matchData.status !== "upcoming") {
+      return res.status(400).json({
+        error: "Match cannot be started from current state",
+      });
+    }
+
+    // ✅ Update match
+    await matchRef.update({
+      status: "live",
+      startedAt: Date.now(),
+    });
+
+    return res.json({ message: "Match started successfully" });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to start match" });
+  }
+});
+
+
+app.post("/admin/match/:matchId/end", adminAuth, async (req, res) => {
+  try {
+    const { matchId } = req.params;
+    const adminId = req.headers["x-admin-id"];
+    const collegeId = req.admin.college_id;
+    const { tournamentId } = req.body;
+
+    const matchRef = db.ref(
+      `tournaments/${collegeId}/${tournamentId}/matches/${matchId}`
+    );
+
+    const snapshot = await matchRef.once("value");
+
+    if (!snapshot.exists()) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    const match = snapshot.val();
+
+    if (match.assigned_admin?.adminId !== adminId) {
+      return res.status(403).json({ error: "Not assigned admin" });
+    }
+
+    if (match.status !== "live") {
+      return res.status(400).json({
+        error: "Only live matches can be ended",
+      });
+    }
+
+    await matchRef.update({
+      status: "finished",
+      endedAt: Date.now(),
+    });
+
+    return res.json({ message: "Match ended successfully" });
+  } catch (err) {
+    console.error("END MATCH ERROR:", err);
+    return res.status(500).json({ error: "Failed to end match" });
+  }
+});
 
 
 
@@ -415,6 +701,7 @@ app.get("/", (req, res) => {
 
 const PORT = 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(3000, "0.0.0.0", () => {
+  console.log("PlayTalk backend running on port 3000 🚀");
 });
+
