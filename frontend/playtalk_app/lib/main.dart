@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playtalk_app/core/constants/app_routes.dart';
 import 'package:playtalk_app/features/match_admin/presentation/pages/match_admin_home_page.dart';
 import 'package:playtalk_app/features/super_admin/presentation/pages/super_admin_home_page.dart';
-import 'package:playtalk_app/features/user/presentation/pages/user_home_page.dart';
+import 'package:playtalk_app/features/user/data/datasources/user_matches_remote_datasource.dart';
+import 'package:playtalk_app/features/user/presentation/bloc/user_matches_bloc.dart';
+import 'package:playtalk_app/features/user/presentation/pages/user_dashboard_page.dart';
 
 import 'features/auth/presentation/pages/role_loader.dart';
 import 'features/commentary/data/datasources/commentary_firebase_datasource.dart';
@@ -49,7 +51,15 @@ void main() async {
       createTournament: CreateTournament(repo),
     )..add(LoadTournaments());
   },
+
+
 ),
+
+BlocProvider(
+          create: (_) => UserMatchesBloc(
+            UserMatchesRemoteDatasource(),
+          ),
+        ),
 
   ],
   child: const PlayTalkApp(),
@@ -72,7 +82,7 @@ class PlayTalkApp extends StatelessWidget {
         AppRoutes.roleLoader: (_) => const RoleLoaderPage(),
         AppRoutes.superAdminHome: (_) => const SuperAdminHomePage(),
         AppRoutes.matchAdminHome: (_) => const AdminHomePage(adminId: '-Oh19pD34L67JX0RbCRr',),
-        AppRoutes.userHome: (_) => const UserHomePage(),
+        AppRoutes.userHome: (_) => const UserDashboardPage(collegeId: '-Oh17xBpAcfcH0s_4ZB2'),
         // AppRoutes.liveMatch: (_) => const LiveMatchPage(), // 👈 YOUR PAGE
       },
     );
