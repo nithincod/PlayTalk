@@ -16,6 +16,8 @@ import 'features/commentary/domain/usecases/listen_to_commentary.dart';
 import 'features/commentary/presentation/bloc/commentary_bloc.dart';
 import 'features/commentary/presentation/bloc/commentary_event.dart';
 // import 'features/commentary/presentation/pages/live_match_page.dart';
+import 'features/match_admin/data/datasources/match_lifeycle_remote_datasource.dart';
+import 'features/match_admin/presentation/bloc/match_lifecycle_bloc.dart';
 import 'features/super_admin/data/datasources/match_remote_datasource.dart';
 import 'features/super_admin/data/datasources/tournament_remote_datasource.dart';
 import 'features/super_admin/data/repositories/tournament_repository_impl.dart';
@@ -68,9 +70,16 @@ BlocProvider(
             baseUrl: "http://192.168.1.2:3000",
             adminId: "-Oh19e8DauETQEhQxB5G",
           ),
-        ))
+        )),
 
-
+        BlocProvider(
+          create: (_) => MatchLifecycleBloc(
+            MatchLifecycleRemoteDatasource(
+              baseUrl: "http://192.168.1.2:3000",
+              adminId: "-Oh19pD34L67JX0RbCRr",
+            ),
+          ),
+        ),
 
   ],
   child: const PlayTalkApp(),
@@ -92,7 +101,7 @@ class PlayTalkApp extends StatelessWidget {
       routes: {
         AppRoutes.roleLoader: (_) => const RoleLoaderPage(),
         AppRoutes.superAdminHome: (_) => const SuperAdminHomePage(),
-        AppRoutes.matchAdminHome: (_) => const AdminHomePage(adminId: '-Oh19pD34L67JX0RbCRr',),
+        AppRoutes.matchAdminHome: (_) => const MatchAdminHomeStyledPage(adminId: '-Oh19pD34L67JX0RbCRr',),
         AppRoutes.userHome: (_) => const UserDashboardPage(collegeId: '-Oh17xBpAcfcH0s_4ZB2'),
         // AppRoutes.liveMatch: (_) => const LiveMatchPage(), // 👈 YOUR PAGE
       },
