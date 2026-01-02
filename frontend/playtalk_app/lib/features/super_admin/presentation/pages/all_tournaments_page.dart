@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playtalk_app/features/super_admin/domain/models/tournament_model.dart';
+import 'package:playtalk_app/features/super_admin/presentation/bloc/match_event.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/tornament_state.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/tournament_bloc.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/tournament_event.dart';
+import 'package:playtalk_app/features/super_admin/presentation/pages/tournament_details_page.dart';
+
+import '../../data/datasources/match_remote_datasource.dart';
+import '../bloc/match_bloc.dart';
 
 class TournamentsPage extends StatefulWidget {
   const TournamentsPage({super.key});
@@ -139,23 +144,41 @@ class _TournamentCard extends StatelessWidget {
           _SportIcon(tournament.sport),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  tournament.name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+            child: GestureDetector(
+              onTap: () {
+               
+               Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => BlocProvider.value(
+      value: context.read<MatchBloc>(), // ✅ SAME INSTANCE
+      child: TournamentDetailsPage(
+        tournament: tournament,
+      ),
+    ),
+  ),
+);
+
+
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tournament.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  "${tournament.sport} • ${tournament.mode}",
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    "${tournament.sport} • ${tournament.mode}",
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ],
+              ),
             ),
           ),
           const Icon(Icons.arrow_forward_ios,

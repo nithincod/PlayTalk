@@ -4,11 +4,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/match_bloc.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/match_state.dart';
 import 'package:playtalk_app/features/super_admin/presentation/pages/all_tournaments_page.dart';
+import 'package:playtalk_app/features/super_admin/presentation/pages/create_tournament_page.dart';
+import 'package:playtalk_app/features/super_admin/presentation/pages/finished_matches_page.dart';
 import 'package:playtalk_app/features/super_admin/presentation/pages/ongoing_matches.dart';
 
 import '../bloc/match_event.dart';
 import '../bloc/tournament_bloc.dart';
 import '../bloc/tornament_state.dart';
+import '../bloc/tournament_event.dart';
 // import '../../domain/models/tournament_model.dart';
 // import 'create_tournament_page.dart';
 // import 'tournament_details_page.dart';
@@ -127,6 +130,7 @@ class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
   void initState() {
     super.initState();
     context.read<MatchBloc>().add(LoadAdminMatches());
+    context.read<TournamentBloc>().add(LoadTournaments());
   }
 
   @override
@@ -341,6 +345,23 @@ class _StatsGrid extends StatelessWidget {
           value: finished.toString(),
           icon: Icons.check_circle,
           color: Colors.grey,
+          onTap: () {
+            if (matchState is MatchLoaded) {
+              final matches = (matchState as MatchLoaded).matches;
+              final finishedMatches = matches
+                  .where((m) => m.status == "finished")
+                  .toList();
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => FinishedMatchesPage(
+                    matches: finishedMatches,
+                  ),
+                ),
+              );
+            }
+          },
         ),
       ],
     );
@@ -441,7 +462,14 @@ class _QuickActions extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CreateTournamentPage(),
+                ),
+              );
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E4DFF),
               shape: RoundedRectangleBorder(

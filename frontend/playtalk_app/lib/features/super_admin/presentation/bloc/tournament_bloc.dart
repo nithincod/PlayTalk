@@ -17,7 +17,9 @@ class TournamentBloc extends Bloc<TournamentEvent, TournamentState> {
       emit(TournamentLoading());
       try {
         final tournaments = await getTournaments();
+        print("Tournaments loaded: ${tournaments.length}");
         emit(TournamentLoaded(tournaments));
+
       } catch (e) {
         emit(TournamentError("Failed to load tournaments"));
       }

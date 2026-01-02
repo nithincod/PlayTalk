@@ -48,6 +48,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         );
 
         add(LoadMatches(event.tournamentId));
+        add(LoadAdminMatches());
       } catch (e) {
         emit(MatchError("Failed to create match"));
       }
