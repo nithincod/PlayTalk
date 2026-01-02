@@ -493,6 +493,43 @@ app.post("/superadmin/assign-match-admin", async (req, res) => {
   }
 });
 
+app.get("/admin/matches", adminAuth,requireSuperAdmin, async (req, res) => {
+  try {
+    const { college_id } = req.admin;
+
+    const tournamentsSnap = await db
+      .ref(`tournaments/${college_id}`)
+      .once("value");
+
+    if (!tournamentsSnap.exists()) {
+      return res.json([]);
+    }
+
+    const tournaments = tournamentsSnap.val();
+    const allMatches = [];
+
+    // 🔁 iterate tournaments
+    for (const tournamentId in tournaments) {
+      const tournament = tournaments[tournamentId];
+      if (!tournament.matches) continue;
+
+      for (const matchId in tournament.matches) {
+        allMatches.push({
+          matchId,
+          tournamentId,
+          ...tournament.matches[matchId],
+        });
+      }
+    }
+
+    return res.json(allMatches);
+  } catch (err) {
+    console.error("ADMIN MATCH AGG ERROR:", err);
+    return res.status(500).json({ error: "Failed to fetch matches" });
+  }
+});
+
+
 
 
 
@@ -550,6 +587,9 @@ app.get("/admin/assigned-matches", adminAuth, async (req, res) => {
   try {
     const adminId = req.headers["x-admin-id"];
     const collegeId = req.admin.college_id;
+
+    console.log("ADMIN:", adminId, "COLLEGE:", collegeId);
+
 
     const tournamentsSnap = await db
       .ref(`tournaments/${collegeId}`)

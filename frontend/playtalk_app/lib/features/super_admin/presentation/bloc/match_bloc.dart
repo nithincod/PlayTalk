@@ -23,6 +23,16 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         emit(MatchError("Failed to load matches"));
       }
     });
+    on<LoadAdminMatches>((event, emit) async {
+  emit(MatchLoading());
+  try {
+    final raw = await datasource.fetchAdminMatches();
+    final matches = raw.map((e) => MatchModel.fromJson(e)).toList();
+    emit(MatchLoaded(matches));
+  } catch (_) {
+    emit(MatchError("Failed to load matches"));
+  }
+});
 
     on<CreateMatchEvent>((event, emit) async {
       emit(MatchLoading());

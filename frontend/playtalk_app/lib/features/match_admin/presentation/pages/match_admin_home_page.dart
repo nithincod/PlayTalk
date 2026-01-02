@@ -36,7 +36,7 @@ class AdminHomePage extends StatelessWidget {
         // 🔹 Assigned matches list
         BlocProvider(
           create: (_) => AdminMatchesBloc(
-            AdminMatchesRemoteDatasource("http://192.168.1.6:3000"),
+            AdminMatchesRemoteDatasource("http://192.168.1.2:3000"),
           )..add(LoadAdminMatches(adminId)),
         ),
 
@@ -44,7 +44,7 @@ class AdminHomePage extends StatelessWidget {
         BlocProvider(
           create: (_) => MatchLifecycleBloc(
             MatchLifecycleRemoteDatasource(
-              baseUrl: "http://192.168.1.6:3000",
+              baseUrl: "http://192.168.1.2:3000",
               adminId: adminId,
             ),
           ),
@@ -158,7 +158,7 @@ class AdminHomePage extends StatelessWidget {
                                                         MatchEventBloc(
                                                       MatchEventRemoteDatasource(
                                                         baseUrl:
-                                                            "http://192.168.1.6:3000",
+                                                            "http://192.168.1.2:3000",
                                                         adminId: adminId,
                                                       ),
                                                     ),

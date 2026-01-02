@@ -31,6 +31,21 @@ class MatchRemoteDatasource {
     );
   }
 
+  Future<List<Map<String, dynamic>>> fetchAdminMatches() async {
+  final res = await http.get(
+    Uri.parse("$baseUrl/admin/matches"),
+    headers: {
+      "x-admin-id": adminId,
+    },
+  );
+
+  if (res.statusCode != 200) {
+    throw Exception("Failed to fetch matches");
+  }
+
+  return List<Map<String, dynamic>>.from(jsonDecode(res.body));
+}
+
   // ✅ Create match INSIDE tournament (Option 2)
   Future<void> createMatch({
     required String tournamentId,

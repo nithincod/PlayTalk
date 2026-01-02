@@ -23,7 +23,7 @@ class TournamentDetailsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final matchDatasource = MatchRemoteDatasource(
-      baseUrl: "http://192.168.1.6:3000",
+      baseUrl: "http://192.168.1.2:3000",
       adminId: "-Oh19e8DauETQEhQxB5G", // TODO: from auth
     );
 
@@ -103,7 +103,7 @@ class TournamentDetailsPage extends StatelessWidget {
     builder: (_) => BlocProvider(
       create: (_) => AssignMatchAdminBloc(
         AssignMatchAdminRemoteDatasource(
-          baseUrl: "http://192.168.1.6:3000",
+          baseUrl: "http://192.168.1.2:3000",
           superAdminId: "-Oh19e8DauETQEhQxB5G",
         ),
       ),

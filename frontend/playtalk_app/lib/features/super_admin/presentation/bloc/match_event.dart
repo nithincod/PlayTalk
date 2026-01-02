@@ -5,6 +5,8 @@ class LoadMatches extends MatchEvent {
   LoadMatches(this.tournamentId);
 }
 
+class LoadAdminMatches extends MatchEvent {}
+
 class CreateMatchEvent extends MatchEvent {
   final String tournamentId;
   final String name;
