@@ -493,6 +493,39 @@ app.post("/superadmin/assign-match-admin", async (req, res) => {
   }
 });
 
+app.get("/superadmin/match-admins", adminAuth, async (req, res) => {
+  try {
+    const collegeId = req.admin.college_id;
+
+    const snap = await db.ref(`admins`).once("value");
+
+    if (!snap.exists()) return res.json([]);
+
+    const admins = [];
+
+    snap.forEach(child => {
+      const admin = child.val();
+
+      // only match admins from same college
+      if (
+        admin.college_id === collegeId &&
+        admin.role === "match_admin"
+      ) {
+        admins.push({
+          adminId: child.key,
+          name: admin.name,
+          role: admin.role,
+        });
+      }
+    });
+
+    res.json(admins);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to load admins" });
+  }
+});
+
+
 app.get("/admin/matches", adminAuth,requireSuperAdmin, async (req, res) => {
   try {
     const { college_id } = req.admin;

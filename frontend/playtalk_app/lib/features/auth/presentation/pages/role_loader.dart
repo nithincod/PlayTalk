@@ -21,8 +21,8 @@ class _RoleLoaderPageState extends State<RoleLoaderPage> {
     await Future.delayed(const Duration(seconds: 1));
 
     // Simulated role from backend
-    final role = "match_admin"; 
-    // change to: match_admin / user to test
+    final role = "super_admin"; 
+    // change to: super_admin / user to test
 
     if (!mounted) return;
 

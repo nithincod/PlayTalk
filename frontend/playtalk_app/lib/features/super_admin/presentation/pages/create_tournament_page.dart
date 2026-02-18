@@ -159,16 +159,17 @@ class _CreateTournamentPageState extends State<CreateTournamentPage> {
         backgroundColor: const Color(0xFF0F1424),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white,size: 24),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text("Create Tournament"),
+        title: const Text("Create Tournament",
+            style: TextStyle(color: Colors.white,fontWeight: FontWeight.bold)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.grey),
+              "X",
+              style: TextStyle(color: Colors.red,fontSize: 24, fontWeight: FontWeight.bold),
             ),
           )
         ],
@@ -352,7 +353,7 @@ class _CreateTournamentPageState extends State<CreateTournamentPage> {
       ),
       child: const Text(
         "Submit",
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold,color: Colors.white),
       ),
     );
   }

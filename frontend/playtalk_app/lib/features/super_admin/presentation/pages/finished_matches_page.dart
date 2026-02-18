@@ -17,7 +17,7 @@ class FinishedMatchesPage extends StatelessWidget {
         backgroundColor: const Color(0xFF0F1424),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Colors.white,size: 24),
           onPressed: () => Navigator.pop(context),
         ),
         title: Column(
@@ -25,7 +25,7 @@ class FinishedMatchesPage extends StatelessWidget {
           children: [
             const Text(
               "Finished Matches",
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white),
             ),
             Text(
               "Total ${matches.length} matches completed",

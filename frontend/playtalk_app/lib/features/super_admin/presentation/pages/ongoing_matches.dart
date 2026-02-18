@@ -14,9 +14,15 @@ class OngoingMatchesPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFF0F1424),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E2438),
+        backgroundColor: const Color(0xFF0F1424),
         elevation: 0,
-        title: const Text("Ongoing Matches"),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white,size: 24),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text("Ongoing Matches",
+            style: TextStyle(color: Colors.white)),
+
       ),
       body: matches.isEmpty
           ? const Center(
@@ -94,11 +100,18 @@ class _LiveMatchCard extends StatelessWidget {
                 style: const TextStyle(color: Colors.grey),
               ),
               const Spacer(),
-              TextButton(
-                onPressed: () {
-                  // MATCH CENTER NAVIGATION
-                },
-                child: const Text("MATCH CENTER →"),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                 child: Text(
+                  "Match Center",
+                  style: TextStyle(
+                    color: Colors.greenAccent,
+                  ),
+                 )
               )
             ],
           )

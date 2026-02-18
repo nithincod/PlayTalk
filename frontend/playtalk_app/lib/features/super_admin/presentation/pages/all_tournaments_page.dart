@@ -91,10 +91,12 @@ PreferredSizeWidget _buildAppBar() {
   return AppBar(
     backgroundColor: const Color(0xFF0F1424),
     elevation: 0,
-    leading: const BackButton(),
+    leading: const BackButton(
+      color: Colors.white,
+    ),
     title: const Text(
       "Tournaments",
-      style: TextStyle(fontWeight: FontWeight.bold),
+      style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),
     ),
   );
 }
@@ -146,6 +148,7 @@ class _TournamentCard extends StatelessWidget {
           Expanded(
             child: GestureDetector(
               onTap: () {
+                debugPrint("Tapped on ${tournament.name}");
                
                Navigator.push(
   context,

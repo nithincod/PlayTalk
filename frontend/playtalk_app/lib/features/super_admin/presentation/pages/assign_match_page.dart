@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../domain/models/match_admin_model.dart';
 
 import '../bloc/assign_match_admin_bloc.dart';
 import '../bloc/assign_match_admin_event.dart';
@@ -13,123 +14,124 @@ class AssignMatchAdminPage extends StatefulWidget {
   const AssignMatchAdminPage({
     super.key,
     required this.matchId,
-    required this.matchName, required this.tournamentId,
+    required this.matchName,
+    required this.tournamentId,
   });
 
   @override
-  State<AssignMatchAdminPage> createState() => _AssignMatchAdminPageState();
+  State<AssignMatchAdminPage> createState() =>
+      _AssignMatchAdminPageState();
 }
 
 class _AssignMatchAdminPageState extends State<AssignMatchAdminPage> {
-  String? _selectedAdmin;
+  MatchAdminModel? selectedAdmin;
 
-  // 🔹 TEMP DUMMY ADMINS (next phase: from backend)
-  final List<String> _admins = [
-    "Nithin",
-    "Admin B",
-    "Admin C",
-  ];
+  @override
+  void initState() {
+    super.initState();
+    context.read<AssignMatchAdminBloc>().add(LoadMatchAdmins());
+  }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AssignMatchAdminBloc, AssignMatchAdminState>(
       listener: (context, state) {
         if (state is AssignMatchAdminSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Admin assigned successfully")),
-          );
           Navigator.pop(context);
-        }
-
-        if (state is AssignMatchAdminFailure) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text("Assign Match Admin"),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Match Info
-              Text(
-                widget.matchName,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Match ID: ${widget.matchId}",
-                style: const TextStyle(color: Colors.grey),
-              ),
+        appBar: AppBar(title: const Text("Assign Match Admin")),
+        body: BlocBuilder<AssignMatchAdminBloc,
+            AssignMatchAdminState>(
+          builder: (context, state) {
 
-              const SizedBox(height: 24),
+            if (state is AssignMatchAdminLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              // Admin Dropdown
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(
-                  labelText: "Select Admin",
-                  border: OutlineInputBorder(),
-                ),
-                value: _selectedAdmin,
-                items: _admins
-                    .map(
-                      (admin) => DropdownMenuItem(
-                        value: admin,
-                        child: Text(admin),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedAdmin = value;
-                  });
-                },
-              ),
+            if (state is MatchAdminsLoaded) {
+              return Column(
+                children: [
+                  const SizedBox(height: 16),
 
-              const SizedBox(height: 24),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: state.admins.length,
+                      itemBuilder: (context, i) {
+                        final admin = state.admins[i];
+                        final selected =
+                            selectedAdmin?.adminId ==
+                                admin.adminId;
 
-              // Assign Button + Loading
-              SizedBox(
-                width: double.infinity,
-                child: BlocBuilder<AssignMatchAdminBloc,
-                    AssignMatchAdminState>(
-                  builder: (context, state) {
-                    if (state is AssignMatchAdminLoading) {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-
-                    return ElevatedButton(
-                      onPressed: _selectedAdmin == null
-                          ? null
-                          : () {
-                              context
-                                  .read<AssignMatchAdminBloc>()
-                                  .add(
-                                    AssignMatchAdminPressed(
-                                      
-                                      matchId: widget.matchId,
-                                      adminId: "-Oh19pD34L67JX0RbCRr",
-                                      adminName: _selectedAdmin!, tournamentId: widget.tournamentId,
-                                    ),
-                                  );
+                        return Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                BorderRadius.circular(16),
+                            border: Border.all(
+                              color: selected
+                                  ? Colors.blue
+                                  : Colors.grey.shade300,
+                              width: 2,
+                            ),
+                          ),
+                          child: ListTile(
+                            title: Text(admin.name),
+                            subtitle: Text(admin.role),
+                            trailing: selected
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.blue)
+                                : null,
+                            onTap: () {
+                              setState(() {
+                                selectedAdmin = admin;
+                              });
                             },
-                      child: const Text("Assign Admin"),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: selectedAdmin == null
+                            ? null
+                            : () {
+                                context
+                                    .read<
+                                        AssignMatchAdminBloc>()
+                                    .add(
+                                      AssignMatchAdminPressed(
+                                        tournamentId:
+                                            widget.tournamentId,
+                                        matchId:
+                                            widget.matchId,
+                                        adminId:
+                                            selectedAdmin!
+                                                .adminId,
+                                        adminName:
+                                            selectedAdmin!
+                                                .name,
+                                      ),
+                                    );
+                              },
+                        child:
+                            const Text("Confirm Assignment"),
+                      ),
+                    ),
+                  )
+                ],
+              );
+            }
+
+            return const SizedBox();
+          },
         ),
       ),
     );

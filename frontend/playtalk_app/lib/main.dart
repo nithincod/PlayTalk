@@ -44,7 +44,7 @@ void main() async {
     BlocProvider(
   create: (_) {
     final datasource = TournamentRemoteDatasource(
-      baseUrl: "http://192.168.1.2:3000",
+      baseUrl: "http://172.70.105.138:3000",
       adminId: "-Oh19e8DauETQEhQxB5G",
     );
 
@@ -67,7 +67,7 @@ BlocProvider(
 
         BlocProvider(create:(_)=>MatchBloc(
           MatchRemoteDatasource(
-            baseUrl: "http://192.168.1.2:3000",
+            baseUrl: "http://172.70.105.138:3000",
             adminId: "-Oh19e8DauETQEhQxB5G",
           ),
         )),
@@ -75,7 +75,7 @@ BlocProvider(
         BlocProvider(
           create: (_) => MatchLifecycleBloc(
             MatchLifecycleRemoteDatasource(
-              baseUrl: "http://192.168.1.2:3000",
+              baseUrl: "http://172.70.105.138:3000",
               adminId: "-Oh19pD34L67JX0RbCRr",
             ),
           ),

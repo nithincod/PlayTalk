@@ -8,6 +8,14 @@ import '../bloc/match_bloc.dart';
 import '../bloc/match_event.dart';
 import '../bloc/match_state.dart';
 import '../../data/datasources/match_remote_datasource.dart';
+import 'package:playtalk_app/features/super_admin/presentation/pages/assign_match_page.dart';
+
+import 'package:playtalk_app/features/super_admin/presentation/bloc/assign_match_admin_bloc.dart';
+import 'package:playtalk_app/features/super_admin/data/datasources/assign_match_admin_remote_datasource.dart';
+import 'package:playtalk_app/features/super_admin/presentation/bloc/match_bloc.dart';
+
+
+
 
 enum MatchFilter { all, live, upcoming, finished }
 
@@ -33,11 +41,15 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0F1424),
         elevation: 0,
-        leading: const BackButton(),
+        leading: const BackButton(
+          color: Colors.white,
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(widget.tournament.name),
+            Text(widget.tournament.name,
+                style: const TextStyle(
+                    color: Colors.white,)),
             const Text(
               "Tournament Matches",
               style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -85,7 +97,7 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
           hintText: "Search matches...",
           prefixIcon: const Icon(Icons.search),
           filled: true,
-          fillColor: const Color(0xFF1E2438),
+          fillColor: const Color.fromARGB(255, 255, 255, 255),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -265,7 +277,7 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
         ),
 
         // 🔥 ASSIGN ADMIN (ONLY UPCOMING)
-        if (isUpcoming) ...[
+        if (isUpcoming && !match.hasAssignedAdmin) ...[
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
@@ -285,10 +297,32 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              onPressed: () {
-                // 👉 Navigate to Assign Admin Page
-                // Navigator.push(...)
-              },
+              onPressed: () async {
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => BlocProvider(
+        create: (_) => AssignMatchAdminBloc(
+          AssignMatchAdminRemoteDatasource(
+            baseUrl: "http://172.70.105.138:3000",
+            superAdminId: "-Oh19e8DauETQEhQxB5G",
+          ),
+        ),
+        child: AssignMatchAdminPage(
+          matchId: match.matchId,
+          matchName: match.name,
+          tournamentId: widget.tournament.tournamentId,
+        ),
+      ),
+    ),
+  );
+
+  // 🔥 REFRESH MATCHES AFTER RETURNING
+  context.read<MatchBloc>().add(
+        LoadMatches(widget.tournament.tournamentId),
+      );
+},
+
             ),
           ),
         ],

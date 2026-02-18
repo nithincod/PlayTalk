@@ -1,5 +1,7 @@
 abstract class AssignMatchAdminEvent {}
 
+class LoadMatchAdmins extends AssignMatchAdminEvent {}
+
 class AssignMatchAdminPressed extends AssignMatchAdminEvent {
   final String matchId;
   final String adminId;

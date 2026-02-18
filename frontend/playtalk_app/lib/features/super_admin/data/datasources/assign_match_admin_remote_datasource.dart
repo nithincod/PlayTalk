@@ -1,40 +1,55 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import '../../domain/models/match_admin_model.dart';
 
 class AssignMatchAdminRemoteDatasource {
-  final Dio dio;
   final String baseUrl;
   final String superAdminId;
 
   AssignMatchAdminRemoteDatasource({
     required this.baseUrl,
     required this.superAdminId,
-  }) : dio = Dio(
-          BaseOptions(
-            baseUrl: baseUrl,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          ),
-        );
+  });
 
-  /// ✅ ASSIGN ADMIN TO MATCH (TOURNAMENT-CENTRIC)
+  // 🔥 NEW — FETCH ADMINS
+  Future<List<MatchAdminModel>> fetchAdmins() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/superadmin/match-admins"),
+      headers: {
+        "x-admin-id": superAdminId,
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to fetch admins");
+    }
+
+    final data = jsonDecode(response.body);
+
+    return (data as List)
+        .map((e) => MatchAdminModel.fromJson(e))
+        .toList();
+  }
+
+  // EXISTING
   Future<void> assignAdmin({
     required String tournamentId,
     required String matchId,
     required String adminId,
     required String adminName,
   }) async {
-    await dio.post(
-      "/admin/tournament/$tournamentId/match/$matchId/assign-admin",
-      options: Options(
-        headers: {
-          "x-admin-id": superAdminId, // 🔐 auth
-        },
+    await http.post(
+      Uri.parse(
+        "$baseUrl/admin/tournament/$tournamentId/match/$matchId/assign-admin",
       ),
-      data: {
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-id": superAdminId,
+      },
+      body: jsonEncode({
         "adminId": adminId,
         "adminName": adminName,
-      },
+      }),
     );
   }
 }

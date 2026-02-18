@@ -251,13 +251,13 @@ class _MatchAdminHomeStyledPageState
       providers: [
         BlocProvider(
           create: (_) => AdminMatchesBloc(
-            AdminMatchesRemoteDatasource("http://192.168.1.2:3000"),
+            AdminMatchesRemoteDatasource("http://172.70.105.138:3000"),
           )..add(LoadAdminMatches(widget.adminId)),
         ),
         BlocProvider(
           create: (_) => MatchLifecycleBloc(
             MatchLifecycleRemoteDatasource(
-              baseUrl: "http://192.168.1.2:3000",
+              baseUrl: "http://172.70.105.138:3000",
               adminId: widget.adminId,
             ),
           ),
@@ -510,7 +510,7 @@ class _MatchAdminHomeStyledPageState
                   BlocProvider(
                     create: (_) => MatchEventBloc(
                       MatchEventRemoteDatasource(
-                        baseUrl: "http://192.168.1.2:3000",
+                        baseUrl: "http://172.70.105.138:3000",
                         adminId: adminId,
                       ),
                     ),
