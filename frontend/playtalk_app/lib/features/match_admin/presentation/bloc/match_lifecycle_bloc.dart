@@ -11,13 +11,16 @@ class MatchLifecycleBloc
       : super(MatchLifecycleInitial()) {
     on<StartMatchPressed>((event, emit) async {
       emit(MatchLifecycleLoading());
+      print("StartMatchPressed: Loading...");
       try {
         await datasource.startMatch(
           event.matchId,
           tournamentId: event.tournamentId,
         );
+        print("StartMatchPressed: Success!");
         emit(MatchLifecycleSuccess());
-      } catch (_) {
+      } catch (e) {
+        print("StartMatchPressed: Error - $e");
         emit(MatchLifecycleFailure("Failed to start match"));
       }
     });

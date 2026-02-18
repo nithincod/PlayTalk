@@ -101,7 +101,7 @@ class PlayTalkApp extends StatelessWidget {
       routes: {
         AppRoutes.roleLoader: (_) => const RoleLoaderPage(),
         AppRoutes.superAdminHome: (_) => const SuperAdminHomePage(),
-        AppRoutes.matchAdminHome: (_) => const MatchAdminHomeStyledPage(adminId: '-Oh19pD34L67JX0RbCRr',),
+        AppRoutes.matchAdminHome: (_) => MatchAdminHomeStyledPage(adminId: '-Oh19pD34L67JX0RbCRr',),
         AppRoutes.userHome: (_) => const UserDashboardPage(collegeId: '-Oh17xBpAcfcH0s_4ZB2'),
         // AppRoutes.liveMatch: (_) => const LiveMatchPage(), // 👈 YOUR PAGE
       },

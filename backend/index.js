@@ -286,7 +286,12 @@ app.get(
 
     if (!snap.exists()) return res.json([]);
 
-    const matches = Object.values(snap.val());
+    const matchesData = snap.val();
+    const matches = Object.keys(matchesData).map((matchId) => ({
+      matchId,
+      tournamentId,
+      ...matchesData[matchId],
+    }));
     res.json(matches);
   }
 );

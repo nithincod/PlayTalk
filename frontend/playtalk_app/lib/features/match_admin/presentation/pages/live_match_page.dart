@@ -590,22 +590,6 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
             onPressed: () {},
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: OutlinedButton.icon(
-            icon: const Icon(Icons.stop, color: Colors.red),
-            label: const Text("End Set",
-                style: TextStyle(color: Colors.red)),
-            onPressed: () {
-              context.read<MatchLifecycleBloc>().add(
-                    EndMatchPressed(
-                      widget.match.matchId,
-                      widget.match.tournamentId,
-                    ),
-                  );
-            },
-          ),
-        ),
       ],
     );
   }
@@ -641,6 +625,16 @@ class _LiveMatchPageState extends State<LiveMatchPage> {
 
   // ─────────────────────────────────────
   Widget _winnerScreen(Map<String, dynamic> score, String winner) {
+    // Automatically end the match when winner is shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MatchLifecycleBloc>().add(
+            EndMatchPressed(
+              widget.match.matchId,
+              widget.match.tournamentId,
+            ),
+          );
+    });
+    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

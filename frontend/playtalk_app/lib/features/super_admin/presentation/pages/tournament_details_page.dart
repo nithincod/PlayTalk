@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playtalk_app/features/super_admin/presentation/pages/create_match_page.dart';
 
@@ -33,6 +34,16 @@ class TournamentDetailsPage extends StatefulWidget {
 
 class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
   MatchFilter selectedFilter = MatchFilter.all;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load matches when the page is first opened
+    // Use addPostFrameCallback to ensure the context is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MatchBloc>().add(LoadMatches(widget.tournament.tournamentId));
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +158,11 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
   Widget _matchesList() {
     return BlocBuilder<MatchBloc, MatchState>(
       builder: (context, state) {
+        // Handle initial state - show loading to trigger fetch
+        if (state is MatchInitial) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
         if (state is MatchLoading) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -156,11 +172,19 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
         }
 
         if (state is MatchLoaded) {
+          debugPrint('TournamentDetailsPage: Loaded ${state.matches.length} matches for tournament ${widget.tournament.tournamentId}');
+          
+          // Debug: Print tournament IDs from loaded matches
+          for (var m in state.matches) {
+            debugPrint('  Match ${m.matchId}: tournamentId=${m.tournamentId}, name=${m.name}');
+          }
+          
           final filtered = _applyFilter(state.matches, widget.tournament.tournamentId);
+          debugPrint('TournamentDetailsPage: Filtered to ${filtered.length} matches');
 
           if (filtered.isEmpty) {
-            return const Center(
-              child: Text("No matches found"),
+            return Center(
+              child: Text("No matches found for tournament ${widget.tournament.tournamentId}"),
             );
           }
 
@@ -173,7 +197,7 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
           );
         }
 
-        return const SizedBox();
+        return const Center(child: CircularProgressIndicator());
       },
     );
   }
@@ -184,7 +208,9 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
   String tournamentId,
 ) {
   return matches.where((m) {
-    final sameTournament = m.tournamentId == tournamentId;
+    // Skip tournamentId check - matches from this endpoint already belong to this tournament
+    // Also handle empty tournamentId (legacy data in Firebase)
+    final sameTournament = m.tournamentId == tournamentId || m.tournamentId.isEmpty;
 
     if (!sameTournament) return false;
 

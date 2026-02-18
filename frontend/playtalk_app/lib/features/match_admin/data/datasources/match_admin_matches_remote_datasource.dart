@@ -11,6 +11,7 @@ class AdminMatchesRemoteDatasource {
   AdminMatchesRemoteDatasource(this.baseUrl);
 
   Future<List<MatchAdminModel>> getAssignedMatches(String adminId) async {
+    print("Fetching assigned matches for admin: $adminId");
     final response = await http.get(
       Uri.parse("$baseUrl/admin/assigned-matches"), // ✅ FIXED
       headers: {

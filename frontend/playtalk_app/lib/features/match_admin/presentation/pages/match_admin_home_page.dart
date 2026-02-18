@@ -231,7 +231,7 @@ enum AdminMatchFilter { all, live, upcoming, finished }
 class MatchAdminHomeStyledPage extends StatefulWidget {
   final String adminId;
 
-  const MatchAdminHomeStyledPage({
+  MatchAdminHomeStyledPage({
     super.key,
     required this.adminId,
   });
@@ -244,31 +244,45 @@ class MatchAdminHomeStyledPage extends StatefulWidget {
 class _MatchAdminHomeStyledPageState
     extends State<MatchAdminHomeStyledPage> {
   AdminMatchFilter selectedFilter = AdminMatchFilter.all;
+  
+  // Store bloc references here for easy access
+  AdminMatchesBloc? _adminMatchesBloc;
+  MatchLifecycleBloc? _lifecycleBloc;
 
   @override
   Widget build(BuildContext context) {
+    // Create blocs and store references
+    final adminMatchesBloc = AdminMatchesBloc(
+      AdminMatchesRemoteDatasource("http://172.70.105.138:3000"),
+    )..add(LoadAdminMatches(widget.adminId));
+    
+    final lifecycleBloc = MatchLifecycleBloc(
+      MatchLifecycleRemoteDatasource(
+        baseUrl: "http://172.70.105.138:3000",
+        adminId: widget.adminId,
+      ),
+    );
+    
+    // Store in state for access from button
+    _adminMatchesBloc = adminMatchesBloc;
+    _lifecycleBloc = lifecycleBloc;
+    
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => AdminMatchesBloc(
-            AdminMatchesRemoteDatasource("http://172.70.105.138:3000"),
-          )..add(LoadAdminMatches(widget.adminId)),
-        ),
-        BlocProvider(
-          create: (_) => MatchLifecycleBloc(
-            MatchLifecycleRemoteDatasource(
-              baseUrl: "http://172.70.105.138:3000",
-              adminId: widget.adminId,
-            ),
-          ),
-        ),
+        BlocProvider.value(value: adminMatchesBloc),
+        BlocProvider.value(value: lifecycleBloc),
       ],
       child: BlocListener<MatchLifecycleBloc, MatchLifecycleState>(
         listener: (context, state) {
+          print("MatchLifecycleBloc state changed: $state");
           if (state is MatchLifecycleSuccess) {
+            print("Match started successfully, reloading matches...");
             context
                 .read<AdminMatchesBloc>()
                 .add(LoadAdminMatches(widget.adminId));
+          }
+          if (state is MatchLifecycleFailure) {
+            print("Match start failed: ${state.message}");
           }
         },
         child: Scaffold(
@@ -485,14 +499,31 @@ class _MatchAdminHomeStyledPageState
             ? "Enter Live Control"
             : "Start Match",
       ),
-      onPressed: () {
+      onPressed: () async {
+        // Use stored bloc references
+        final adminMatchesBloc = _adminMatchesBloc;
+        final lifecycleBloc = _lifecycleBloc;
+        
+        if (adminMatchesBloc == null || lifecycleBloc == null) {
+          print("ERROR: Blocs not initialized");
+          return;
+        }
+        
+        print("Button pressed for match: ${match.matchId}, status: ${match.status}");
         if (match.status == "upcoming") {
-          context.read<MatchLifecycleBloc>().add(
+          print("Calling MatchLifecycleBloc.add(StartMatchPressed)...");
+          lifecycleBloc.add(
                 StartMatchPressed(
                   match.tournamentId,
                   match.matchId,
                 ),
               );
+          print("StartMatchPressed event dispatched");
+          
+          // Wait a bit for the API call to complete, then reload matches
+          await Future.delayed(const Duration(milliseconds: 500));
+          print("Reloading matches after starting...");
+          adminMatchesBloc.add(LoadAdminMatches(widget.adminId));
         } else {
           Navigator.push(
             context,
