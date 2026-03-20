@@ -210,76 +210,249 @@ class _UserHomeStyledPageState extends State<UserHomeStyledPage> {
         final isLive = match.status == "live";
         final isUpcoming = match.status == "upcoming";
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E2438),
-            borderRadius: BorderRadius.circular(20),
-            border: Border(
-              left: BorderSide(
-                width: 4,
-                color: isLive
-                    ? Colors.green
-                    : isUpcoming
-                        ? Colors.orange
-                        : Colors.grey,
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (_) => UserLiveMatchBloc(
+                    UserLiveMatchRemoteDatasource(),
+                  ),
+                  child: UserMatchDetailsPage(match: match),
+                ),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+          
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E2438),
+              borderRadius: BorderRadius.circular(20),
+              border: Border(
+                left: BorderSide(
+                  width: 4,
+                  color: isLive
+                      ? Colors.green
+                      : isUpcoming
+                          ? Colors.orange
+                          : Colors.grey,
+                ),
               ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _statusRow(match),
-              const SizedBox(height: 12),
-              Text(
-                "${match.teamA} vs ${match.teamB}",
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Score only for live/finished
-              if (match.status != "upcoming")
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _statusRow(match),
+                const SizedBox(height: 8),
                 Text(
-                  "${match.teamAScore} : ${match.teamBScore}",
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                )
-              else
-                const Text(
-                  "VS",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+            match.name.isNotEmpty ? match.name : "${match.teamA} vs ${match.teamB}",
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          
+         
+          SizedBox(height: 8),
+          _miniScoreBoard(match),
+          SizedBox(height: 8),
+          
+          
+          
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+          child: Row(
+            children: [
+              const Icon(Icons.location_on, size: 16, color: Colors.grey),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  match.court,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.grey),
                 ),
-
-              const SizedBox(height: 6),
-              Text(
-                match.court,
-                style: const TextStyle(color: Colors.grey),
               ),
-              const SizedBox(height: 6),
-              Text(
-                match.tournamentName,
-                style: const TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 14),
-              _actionButton(match),
             ],
+          ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Icon(Icons.emoji_events, size: 16, color: Colors.grey),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  match.tournamentName,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+                ),
+              ],
+            ),
+          ),
+          
+          
+          
+          // _actionButton(match),
+              ],
+            ),
           ),
         );
       },
     );
   }
+  Widget _miniScoreBoard(UserMatchModel match) {
+  final bool isUpcoming = match.status == "upcoming";
+  final bool isLive = match.status == "live";
+
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    decoration: BoxDecoration(
+      // color: const Color(0xFF111827),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: Colors.white.withOpacity(0.05),
+      ),
+    ),
+    child: Row(
+      children: [
+        // LEFT TEAM
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF243B7C),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.06),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.groups,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                match.teamA,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // CENTER SCORE
+        Expanded(
+          flex: 4,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                isUpcoming
+                    ? "VS"
+                    : "${match.teamAScore}  :  ${match.teamBScore}",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                isUpcoming
+                    ? "Not Started"
+                    : isLive
+                        ? "Live Score"
+                        : "Final Score",
+                style: TextStyle(
+                  color: isUpcoming
+                      ? Colors.orange
+                      : isLive
+                          ? Colors.green
+                          : Colors.grey,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // RIGHT TEAM
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF243B7C),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.06),
+                  ),
+                ),
+                child: const Icon(
+                  Icons.groups,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                match.teamB,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   // STATUS ROW
   Widget _statusRow(UserMatchModel match) {
@@ -306,40 +479,40 @@ class _UserHomeStyledPageState extends State<UserHomeStyledPage> {
   }
 
   // ACTION BUTTON
-  Widget _actionButton(UserMatchModel match) {
-  String buttonText;
-  IconData icon;
+//   Widget _actionButton(UserMatchModel match) {
+//   String buttonText;
+//   IconData icon;
 
-  if (match.status == "live") {
-    buttonText = "Watch Live";
-    icon = Icons.play_circle_fill;
-  } else if (match.status == "upcoming") {
-    buttonText = "View Match";
-    icon = Icons.visibility;
-  } else {
-    buttonText = "View Result";
-    icon = Icons.emoji_events;
-  }
+//   if (match.status == "live") {
+//     buttonText = "Watch Live";
+//     icon = Icons.play_circle_fill;
+//   } else if (match.status == "upcoming") {
+//     buttonText = "View Match";
+//     icon = Icons.visibility;
+//   } else {
+//     buttonText = "View Result";
+//     icon = Icons.emoji_events;
+//   }
 
-  return SizedBox(
-    width: double.infinity,
-    child: ElevatedButton.icon(
-      icon: Icon(icon),
-      label: Text(buttonText),
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider(
-              create: (_) => UserLiveMatchBloc(
-                UserLiveMatchRemoteDatasource(),
-              ),
-              child: UserMatchDetailsPage(match: match),
-            ),
-          ),
-        );
-      },
-    ),
-  );
-}
+//   return SizedBox(
+//     width: double.infinity,
+//     child: ElevatedButton.icon(
+//       icon: Icon(icon),
+//       label: Text(buttonText),
+//       onPressed: () {
+//         Navigator.push(
+//           context,
+//           MaterialPageRoute(
+//             builder: (_) => BlocProvider(
+//               create: (_) => UserLiveMatchBloc(
+//                 UserLiveMatchRemoteDatasource(),
+//               ),
+//               child: UserMatchDetailsPage(match: match),
+//             ),
+//           ),
+//         );
+//       },
+//     ),
+//   );
+// }
 }
