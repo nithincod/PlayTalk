@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:playtalk_app/core/constants/app_routes.dart';
+import 'package:playtalk_app/core/session/session_cubit.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/match_bloc.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/match_state.dart';
 import 'package:playtalk_app/features/super_admin/presentation/pages/all_tournaments_page.dart';
@@ -12,111 +14,7 @@ import '../bloc/match_event.dart';
 import '../bloc/tournament_bloc.dart';
 import '../bloc/tornament_state.dart';
 import '../bloc/tournament_event.dart';
-// import '../../domain/models/tournament_model.dart';
-// import 'create_tournament_page.dart';
-// import 'tournament_details_page.dart';
 
-// class SuperAdminHomePage extends StatelessWidget {
-//   const SuperAdminHomePage({super.key});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: const Text("Super Admin Dashboard"),
-//       ),
-//       body: Padding(
-//         padding: const EdgeInsets.all(16),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             const Text(
-//               "College: ABC Engineering College",
-//               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-//             ),
-//             const SizedBox(height: 24),
-
-//             ElevatedButton(
-//               onPressed: () {
-//                 Navigator.push(
-//                   context,
-//                   MaterialPageRoute(
-//                     builder: (_) => const CreateTournamentPage(),
-//                   ),
-//                 );
-//               },
-//               child: const Text("Create Tournament"),
-//             ),
-
-//             const SizedBox(height: 24),
-
-//             const Text(
-//               "Tournaments",
-//               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-//             ),
-
-//             const SizedBox(height: 12),
-
-//             Expanded(
-//               child: BlocBuilder<TournamentBloc, TournamentState>(
-//                 builder: (context, state) {
-//                   if (state is TournamentLoading) {
-//                     return const Center(
-//                       child: CircularProgressIndicator(),
-//                     );
-//                   }
-
-//                   if (state is TournamentLoaded) {
-//                     if (state.tournaments.isEmpty) {
-//                       return const Center(
-//                         child: Text("No tournaments created yet"),
-//                       );
-//                     }
-
-//                     return ListView.builder(
-//                       itemCount: state.tournaments.length,
-//                       itemBuilder: (context, index) {
-//                         final TournamentModel t =
-//                             state.tournaments[index];
-
-//                         return Card(
-//                           margin: const EdgeInsets.only(bottom: 12),
-//                           child: ListTile(
-//                             title: Text(t.name),
-//                             subtitle: Text("${t.sport} • ${t.mode}"),
-//                             trailing:
-//                                 const Icon(Icons.arrow_forward_ios, size: 16),
-//                             onTap: () {
-//                               Navigator.push(
-//                                 context,
-//                                 MaterialPageRoute(
-//                                   builder: (_) =>
-//                                       TournamentDetailsPage(tournament: t),
-//                                 ),
-//                               );
-//                             },
-//                           ),
-//                         );
-//                       },
-//                     );
-//                   }
-
-//                   if (state is TournamentError) {
-//                     return Center(
-//                       child: Text(state.message),
-//                     );
-//                   }
-
-//                   return const SizedBox();
-//                 },
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 class SuperAdminHomePage extends StatefulWidget {
   const SuperAdminHomePage({super.key});
@@ -127,11 +25,15 @@ class SuperAdminHomePage extends StatefulWidget {
 
 class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
 
-  void initState() {
-    super.initState();
-    context.read<MatchBloc>().add(LoadAdminMatches());
+  @override
+void initState() {
+  super.initState();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    context.read<MatchBloc>().add(LoadAllMatches());
     context.read<TournamentBloc>().add(LoadTournaments());
-  }
+  });
+}
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +41,13 @@ class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
       builder: (context, state) {
         return BlocBuilder<MatchBloc, MatchState>(
           builder: (context, matchState) {
+            print("📊 SuperAdminHomePage matchState = ${matchState.runtimeType}");
+if (matchState is MatchLoaded) {
+  print("📊 Dashboard loaded matches count = ${matchState.matches.length}");
+  for (final m in matchState.matches) {
+    print("📊 Dashboard match => ${m.name} | ${m.status}");
+  }
+}
 
             // ✅ keep your existing loading logic
             if (state is TournamentLoading || matchState is MatchLoading) {
@@ -147,13 +56,13 @@ class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
               );
             }
 
-            if (state is TournamentLoaded) {
-              if (state.tournaments.isEmpty) {
-                return const Scaffold(
-                  body: Center(child: Text("No tournaments created yet")),
-                );
-              }
-            }
+            // if (state is TournamentLoaded) {
+            //   if (state.tournaments.isEmpty) {
+            //     return const Scaffold(
+            //       body: Center(child: Text("No tournaments created yet")),
+            //     );
+            //   }
+            // }
 
             return Scaffold(
               backgroundColor: const Color(0xFF0F1424),
@@ -187,12 +96,7 @@ class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
 }
 
 
-class _Header extends StatefulWidget {
-  @override
-  State<_Header> createState() => _HeaderState();
-}
-
-class _HeaderState extends State<_Header> {
+class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -219,10 +123,10 @@ class _HeaderState extends State<_Header> {
           ],
         ),
         const SizedBox(width: 12),
-        Expanded(
+        const Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               Text(
                 "SUPER ADMIN",
                 style: TextStyle(
@@ -247,10 +151,63 @@ class _HeaderState extends State<_Header> {
             ],
           ),
         ),
-        IconButton(
-          onPressed: () {},
+
+        // ✅ SETTINGS DROPDOWN
+        PopupMenuButton<String>(
           icon: const Icon(Icons.settings, color: Colors.white),
-        )
+          color: const Color(0xFF1E2438),
+          onSelected: (value) async {
+  if (value == "logout") {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text("Logout"),
+          content: const Text("Are you sure you want to logout?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text(
+                "Logout",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      context.read<SessionCubit>().clearSession();
+
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    }
+  }
+},
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: "logout",
+              child: Row(
+                children: [
+                  Icon(Icons.logout, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text(
+                    "Logout",
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -302,11 +259,21 @@ class _StatsGrid extends StatelessWidget {
           color: Colors.blue,
           onTap:(){
             Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => TournamentsPage(),
-              ),
-            );
+  context,
+  MaterialPageRoute(
+    builder: (_) => MultiBlocProvider(
+      providers: [
+        BlocProvider.value(
+          value: context.read<TournamentBloc>(),
+        ),
+        BlocProvider.value(
+          value: context.read<MatchBloc>(),
+        ),
+      ],
+      child: const TournamentsPage(), // or AllTournamentsPage()
+    ),
+  ),
+);
           }
         ),
         _StatCard(
@@ -464,11 +431,14 @@ class _QuickActions extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const CreateTournamentPage(),
-                ),
-              );
+  context,
+  MaterialPageRoute(
+    builder: (_) => BlocProvider.value(
+      value: context.read<TournamentBloc>(),
+      child: const CreateTournamentPage(),
+    ),
+  ),
+);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E4DFF),

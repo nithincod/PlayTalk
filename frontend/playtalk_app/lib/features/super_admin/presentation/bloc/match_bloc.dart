@@ -23,18 +23,30 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         emit(MatchError("Failed to load matches"));
       }
     });
-    on<LoadAdminMatches>((event, emit) async {
+    on<LoadAllMatches>((event, emit) async {
   emit(MatchLoading());
+  print("🔥 LoadAllMatches event triggered");
+
   try {
     final raw = await datasource.fetchAdminMatches();
+    print("🔥 RAW ADMIN MATCHES COUNT: ${raw.length}");
+    print("🔥 RAW ADMIN MATCHES DATA: $raw");
+
     final matches = raw.map((e) => MatchModel.fromJson(e)).toList();
+
+    print("🔥 PARSED MATCHES COUNT: ${matches.length}");
+    for (final m in matches) {
+      print("🔥 MATCH => ${m.name} | status=${m.status} | tournamentId=${m.tournamentId}");
+    }
+
     emit(MatchLoaded(matches));
-  } catch (_) {
+  } catch (e) {
+    print("❌ LoadAllMatches ERROR: $e");
     emit(MatchError("Failed to load matches"));
   }
 });
 
-    on<CreateMatchEvent>((event, emit) async {
+    on<CreateMatchPressed>((event, emit) async {
       emit(MatchLoading());
       try {
         await datasource.createMatch(
@@ -48,7 +60,7 @@ class MatchBloc extends Bloc<MatchEvent, MatchState> {
         );
 
         add(LoadMatches(event.tournamentId));
-        add(LoadAdminMatches());
+        add(LoadAllMatches());
       } catch (e) {
         emit(MatchError("Failed to create match"));
       }

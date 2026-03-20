@@ -212,7 +212,7 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
   
 
   matchBloc.add(
-    CreateMatchEvent(
+    CreateMatchPressed(
       tournamentId: widget.tournamentId,
       sport: selectedSport.toLowerCase(),
       name: "$teamA vs $teamB",
@@ -220,7 +220,7 @@ class _CreateMatchPageState extends State<CreateMatchPage> {
       teamB: teamB!,
       court: courtController.text.trim(),
       matchType: "league",
-      status: "upcoming",
+      // status: "upcoming",
     ),
   );
 

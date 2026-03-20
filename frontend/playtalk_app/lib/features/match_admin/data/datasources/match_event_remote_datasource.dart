@@ -3,11 +3,11 @@ import 'package:http/http.dart' as http;
 
 class MatchEventRemoteDatasource {
   final String baseUrl;
-  final String adminId;
+  final String token;
 
   MatchEventRemoteDatasource({
     required this.baseUrl,
-    required this.adminId,
+    required this.token,
   });
 
   Future<void> submitEvent({
@@ -21,13 +21,16 @@ class MatchEventRemoteDatasource {
       ),
       headers: {
         "Content-Type": "application/json",
-        "x-admin-id": adminId,
+        "Authorization": "Bearer $token",
       },
       body: jsonEncode(event),
     );
 
+    print("SUBMIT EVENT STATUS: ${response.statusCode}");
+    print("SUBMIT EVENT BODY: ${response.body}");
+
     if (response.statusCode != 200) {
-      throw Exception("Failed to submit event");
+      throw Exception("Failed to submit event: ${response.body}");
     }
   }
 }

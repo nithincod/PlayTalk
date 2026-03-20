@@ -14,7 +14,7 @@ class AdminMatchesBloc
       emit(AdminMatchesLoading());
       try {
         final matches =
-            await datasource.getAssignedMatches(event.adminId);
+            await datasource.getAssignedMatches();
         emit(AdminMatchesLoaded(matches));
       } catch (e) {
         emit(AdminMatchesError("Failed to load matches"));

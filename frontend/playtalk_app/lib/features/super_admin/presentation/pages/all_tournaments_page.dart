@@ -154,7 +154,7 @@ class _TournamentCard extends StatelessWidget {
   context,
   MaterialPageRoute(
     builder: (_) => BlocProvider.value(
-      value: context.read<MatchBloc>(), // ✅ SAME INSTANCE
+      value: context.read<MatchBloc>(),
       child: TournamentDetailsPage(
         tournament: tournament,
       ),

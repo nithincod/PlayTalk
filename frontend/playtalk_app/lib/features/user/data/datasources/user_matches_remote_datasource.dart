@@ -1,42 +1,36 @@
-import 'package:firebase_database/firebase_database.dart';
-import '../../domain/models/match_model.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:playtalk_app/features/user/domain/models/user_match_model.dart';
 
 class UserMatchesRemoteDatasource {
-  Stream<List<MatchModel>> listenAllMatches({
-    required String collegeId,
-  }) {
-    final ref = FirebaseDatabase.instance.ref("tournaments/$collegeId");
+  final String baseUrl;
+  final String token;
 
-    return ref.onValue.map((event) {
-      final List<MatchModel> matches = [];
+  UserMatchesRemoteDatasource({
+    required this.baseUrl,
+    required this.token,
+  });
 
-      final data = event.snapshot.value;
-      if (data == null) return matches;
+  Future<List<UserMatchModel>> fetchUserMatches() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/user/matches"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
+    );
 
-      final tournaments = Map<String, dynamic>.from(data as Map);
+    print("USER MATCHES STATUS: ${response.statusCode}");
+    print("USER MATCHES BODY: ${response.body}");
 
-      for (final tournamentId in tournaments.keys) {
-        final tournament = tournaments[tournamentId];
-        if (tournament['matches'] == null) continue;
+    if (response.statusCode != 200) {
+      throw Exception("Failed to load user matches");
+    }
 
-        final matchesMap =
-            Map<String, dynamic>.from(tournament['matches']);
+    final List<dynamic> data = jsonDecode(response.body);
 
-        for (final matchId in matchesMap.keys) {
-          final match =
-              Map<String, dynamic>.from(matchesMap[matchId]);
-
-          matches.add(
-            MatchModel.fromJson({
-              ...match,
-              "matchId": matchId,
-              "tournamentId": tournamentId,
-            }),
-          );
-        }
-      }
-
-      return matches;
-    });
+    return data
+        .map((json) => UserMatchModel.fromJson(Map<String, dynamic>.from(json)))
+        .toList();
   }
 }

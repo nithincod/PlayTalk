@@ -3,50 +3,51 @@ import 'package:http/http.dart' as http;
 
 class MatchRemoteDatasource {
   final String baseUrl;
-  final String adminId;
+  final String token;
 
   MatchRemoteDatasource({
     required this.baseUrl,
-    required this.adminId,
+    required this.token,
   });
 
-  // ✅ Fetch matches for a tournament
-  Future<List<Map<String, dynamic>>> fetchMatches(
-      String tournamentId) async {
+  Future<List<dynamic>> fetchMatches(String tournamentId) async {
     final response = await http.get(
-      Uri.parse(
-        "$baseUrl/admin/tournament/$tournamentId/matches",
-      ),
+      Uri.parse("$baseUrl/admin/tournament/$tournamentId/matches"),
       headers: {
-        "x-admin-id": adminId,
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
       },
     );
+
+    print("fetchMatches STATUS: ${response.statusCode}");
+    print("fetchMatches BODY: ${response.body}");
 
     if (response.statusCode != 200) {
       throw Exception("Failed to load matches");
     }
 
-    return List<Map<String, dynamic>>.from(
-      json.decode(response.body),
+    return jsonDecode(response.body) as List<dynamic>;
+  }
+
+  Future<List<dynamic>> fetchAdminMatches() async {
+    final response = await http.get(
+      Uri.parse("$baseUrl/admin/matches"),
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer $token",
+      },
     );
+
+    print("fetchAdminMatches STATUS: ${response.statusCode}");
+    print("fetchAdminMatches BODY: ${response.body}");
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to load admin matches");
+    }
+
+    return jsonDecode(response.body) as List<dynamic>;
   }
 
-  Future<List<Map<String, dynamic>>> fetchAdminMatches() async {
-  final res = await http.get(
-    Uri.parse("$baseUrl/admin/matches"),
-    headers: {
-      "x-admin-id": adminId,
-    },
-  );
-
-  if (res.statusCode != 200) {
-    throw Exception("Failed to fetch matches");
-  }
-
-  return List<Map<String, dynamic>>.from(jsonDecode(res.body));
-}
-
-  // ✅ Create match INSIDE tournament (Option 2)
   Future<void> createMatch({
     required String tournamentId,
     required String name,
@@ -57,12 +58,10 @@ class MatchRemoteDatasource {
     required String sport,
   }) async {
     final response = await http.post(
-      Uri.parse(
-        "$baseUrl/admin/tournament/$tournamentId/create-match",
-      ),
+      Uri.parse("$baseUrl/admin/tournament/$tournamentId/create-match"),
       headers: {
         "Content-Type": "application/json",
-        "x-admin-id": adminId,
+        "Authorization": "Bearer $token",
       },
       body: jsonEncode({
         "name": name,
@@ -73,6 +72,9 @@ class MatchRemoteDatasource {
         "sport": sport,
       }),
     );
+
+    print("createMatch STATUS: ${response.statusCode}");
+    print("createMatch BODY: ${response.body}");
 
     if (response.statusCode != 200) {
       throw Exception("Failed to create match");

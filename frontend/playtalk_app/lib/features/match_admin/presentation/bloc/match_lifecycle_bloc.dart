@@ -7,14 +7,13 @@ class MatchLifecycleBloc
     extends Bloc<MatchLifecycleEvent, MatchLifecycleState> {
   final MatchLifecycleRemoteDatasource datasource;
 
-  MatchLifecycleBloc(this.datasource)
-      : super(MatchLifecycleInitial()) {
+  MatchLifecycleBloc(this.datasource) : super(MatchLifecycleInitial()) {
     on<StartMatchPressed>((event, emit) async {
       emit(MatchLifecycleLoading());
       print("StartMatchPressed: Loading...");
       try {
         await datasource.startMatch(
-          event.matchId,
+          matchId: event.matchId,
           tournamentId: event.tournamentId,
         );
         print("StartMatchPressed: Success!");
@@ -26,17 +25,17 @@ class MatchLifecycleBloc
     });
 
     on<EndMatchPressed>((event, emit) async {
-  emit(MatchLifecycleLoading());
-  try {
-    await datasource.endMatch(
-      matchId: event.matchId,
-      tournamentId: event.tournamentId,
-    );
-    emit(MatchLifecycleSuccess());
-  } catch (_) {
-    emit(MatchLifecycleFailure("Failed to end match"));
-  }
-});
-
+      emit(MatchLifecycleLoading());
+      try {
+        await datasource.endMatch(
+          matchId: event.matchId,
+          tournamentId: event.tournamentId,
+        );
+        emit(MatchLifecycleSuccess());
+      } catch (e) {
+        print("EndMatchPressed: Error - $e");
+        emit(MatchLifecycleFailure("Failed to end match"));
+      }
+    });
   }
 }

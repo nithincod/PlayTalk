@@ -1,16 +1,10 @@
 import admin from "firebase-admin";
 import fs from "fs";
-import path from "path";
 
-// 🔐 Load service account
 const serviceAccount = JSON.parse(
-  fs.readFileSync(
-    path.resolve("firebase-key.json"),
-    "utf8"
-  )
+  fs.readFileSync("./firebase-key.json", "utf8")
 );
 
-// ✅ Initialize ONCE
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -18,5 +12,7 @@ if (!admin.apps.length) {
   });
 }
 
-export const db = admin.database();
-export default admin;
+const db = admin.database();
+const auth = admin.auth();
+
+export { admin, db, auth };

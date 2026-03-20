@@ -1,7 +1,10 @@
 class AppRoutes {
-  static const roleLoader = '/';
-  static const superAdminHome = '/super-admin/home';
-  static const matchAdminHome = '/match-admin/home';
-  static const userHome = '/user/home';
-  static const liveMatch = '/live-match';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String authGate = '/auth-gate';
+  static const String pendingApproval = '/pending-approval';
+
+  static const String superAdminHome = '/super-admin-home';
+  static const String matchAdminHome = '/match-admin-home';
+  static const String userHome = '/user-home';
 }

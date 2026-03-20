@@ -2,39 +2,29 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
 
-
-
-
 class AdminMatchesRemoteDatasource {
   final String baseUrl;
+  final String token;
 
-  AdminMatchesRemoteDatasource(this.baseUrl);
+  AdminMatchesRemoteDatasource({
+    required this.baseUrl,
+    required this.token,
+  });
 
-  Future<List<MatchAdminModel>> getAssignedMatches(String adminId) async {
-    print("Fetching assigned matches for admin: $adminId");
+  Future<List<MatchAdminModel>> getAssignedMatches() async {
     final response = await http.get(
-      Uri.parse("$baseUrl/admin/assigned-matches"), // ✅ FIXED
+      Uri.parse("$baseUrl/admin/assigned-matches"),
       headers: {
         "Content-Type": "application/json",
-        "x-admin-id": adminId, // ✅ REQUIRED
+        "Authorization": "Bearer $token",
       },
     );
-
-    print("STATUS CODE: ${response.statusCode}");
-    print("BODY: ${response.body}");
 
     if (response.statusCode != 200) {
       throw Exception("Failed to load assigned matches");
     }
 
     final List data = jsonDecode(response.body);
-
-   for (final m in data) {
-  print("RAW JSON STATUS: ${m['status']}");
-   }
-
-
-    // final List<dynamic> data2 = jsonDecode(response.body);
 
     return data.map((json) {
       return MatchAdminModel(
@@ -45,8 +35,8 @@ class AdminMatchesRemoteDatasource {
         teamB: json['teamB'],
         matchType: json['matchType'],
         court: json['court'],
-        tournamentId: json['tournamentId'], 
-        status: json['status'] ?? 'upcoming', 
+        tournamentId: json['tournamentId'],
+        status: json['status'] ?? 'upcoming',
         sport: json['sport'] ?? '',
       );
     }).toList();

@@ -14,7 +14,7 @@ import 'package:playtalk_app/features/super_admin/presentation/pages/assign_matc
 import 'package:playtalk_app/features/super_admin/presentation/bloc/assign_match_admin_bloc.dart';
 import 'package:playtalk_app/features/super_admin/data/datasources/assign_match_admin_remote_datasource.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/match_bloc.dart';
-
+import 'package:playtalk_app/core/session/session_cubit.dart';
 
 
 
@@ -324,6 +324,15 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
                 ),
               ),
               onPressed: () async {
+  final session = context.read<SessionCubit>().state;
+
+  if (session == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Session not found. Please login again.")),
+    );
+    return;
+  }
+
   await Navigator.push(
     context,
     MaterialPageRoute(
@@ -331,7 +340,7 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
         create: (_) => AssignMatchAdminBloc(
           AssignMatchAdminRemoteDatasource(
             baseUrl: "http://172.70.105.138:3000",
-            superAdminId: "-Oh19e8DauETQEhQxB5G",
+            token: session.token,
           ),
         ),
         child: AssignMatchAdminPage(
@@ -343,7 +352,6 @@ class _TournamentDetailsPageState extends State<TournamentDetailsPage> {
     ),
   );
 
-  // 🔥 REFRESH MATCHES AFTER RETURNING
   context.read<MatchBloc>().add(
         LoadMatches(widget.tournament.tournamentId),
       );
