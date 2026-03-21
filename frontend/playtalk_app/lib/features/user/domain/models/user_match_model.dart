@@ -9,11 +9,15 @@ class UserMatchModel {
   final String teamA;
   final String teamB;
   final String court;
-  final String matchType;
   final String status;
 
   final int teamAScore;
   final int teamBScore;
+
+  // 🔥 Stream fields
+  final bool isStreaming;
+  final String streamKey;
+  final String hlsUrl;
 
   UserMatchModel({
     required this.matchId,
@@ -25,37 +29,68 @@ class UserMatchModel {
     required this.teamA,
     required this.teamB,
     required this.court,
-    required this.matchType,
     required this.status,
     required this.teamAScore,
     required this.teamBScore,
+    required this.isStreaming,
+    required this.streamKey,
+    required this.hlsUrl,
   });
 
-  factory UserMatchModel.fromJson(Map<String, dynamic> json) {
-    return UserMatchModel(
-      matchId: json['matchId'] ?? '',
-      tournamentId: json['tournamentId'] ?? '',
-      tournamentName: json['tournamentName'] ?? '',
-      collegeId: json['collegeId'] ?? '',
-
-      name: json['name'] ?? '',
-      sport: json['sport'] ?? '',
-      teamA: json['teamA'] ?? '',
-      teamB: json['teamB'] ?? '',
-      court: json['court'] ?? '',
-      matchType: json['matchType'] ?? '',
-      status: json['status'] ?? 'upcoming',
-
-      // ✅ IMPORTANT: use flat scores from backend
-      teamAScore: _toInt(json['teamAScore']),
-      teamBScore: _toInt(json['teamBScore']),
-    );
+  static int _toInt(dynamic value) {
+    return int.tryParse((value ?? 0).toString()) ?? 0;
   }
 
-  static int _toInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    return int.tryParse(value.toString()) ?? 0;
+  factory UserMatchModel.fromJson(Map<String, dynamic> json) {
+    final rawScore = json["score"];
+    int a = _toInt(json["teamAScore"]);
+    int b = _toInt(json["teamBScore"]);
+
+    if (rawScore is Map) {
+      final score = Map<String, dynamic>.from(rawScore);
+
+      if (score["currentSet"] is Map) {
+        final currentSet = Map<String, dynamic>.from(score["currentSet"]);
+        a = _toInt(currentSet["A"]);
+        b = _toInt(currentSet["B"]);
+      } else {
+        a = _toInt(
+          score["teamA"] ??
+              score["teamAScore"] ??
+              score["a"] ??
+              score["scoreA"] ??
+              a,
+        );
+        b = _toInt(
+          score["teamB"] ??
+              score["teamBScore"] ??
+              score["b"] ??
+              score["scoreB"] ??
+              b,
+        );
+      }
+    }
+
+    final stream = json["stream"] is Map
+        ? Map<String, dynamic>.from(json["stream"])
+        : <String, dynamic>{};
+
+    return UserMatchModel(
+      matchId: (json["matchId"] ?? "").toString(),
+      tournamentId: (json["tournamentId"] ?? "").toString(),
+      tournamentName: (json["tournamentName"] ?? "").toString(),
+      collegeId: (json["collegeId"] ?? "").toString(),
+      name: (json["name"] ?? "").toString(),
+      sport: (json["sport"] ?? "").toString(),
+      teamA: (json["teamA"] ?? "").toString(),
+      teamB: (json["teamB"] ?? "").toString(),
+      court: (json["court"] ?? "").toString(),
+      status: (json["status"] ?? "upcoming").toString(),
+      teamAScore: a,
+      teamBScore: b,
+      isStreaming: stream["isStreaming"] == true,
+      streamKey: (stream["streamKey"] ?? json["matchId"] ?? "").toString(),
+      hlsUrl: (stream["hlsUrl"] ?? "").toString(),
+    );
   }
 }

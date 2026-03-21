@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playtalk_app/features/user/presentation/bloc/user_live_bloc.dart';
+import 'package:playtalk_app/features/user/presentation/pages/user_live_stream_page.dart';
 
 import '../../domain/models/user_match_model.dart';
 
@@ -81,6 +82,17 @@ class _UserMatchDetailsPageState extends State<UserMatchDetailsPage> {
           final String name = (liveData["name"] ?? baseMatch.name).toString();
           final String status =
               (liveData["status"] ?? baseMatch.status).toString().toLowerCase();
+
+          final stream = liveData["stream"] is Map
+    ? Map<String, dynamic>.from(liveData["stream"])
+    : <String, dynamic>{
+        "isStreaming": baseMatch.isStreaming,
+        "streamKey": baseMatch.streamKey,
+        "hlsUrl": baseMatch.hlsUrl,
+      };
+
+final bool isStreaming = stream["isStreaming"] == true;
+final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();    
 
           // ─────────────────────────────────────────────
           // SCORE PARSING (supports multiple backend formats)
@@ -214,18 +226,47 @@ class _UserMatchDetailsPageState extends State<UserMatchDetailsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _scoreCard(
-                  name: name,
-                  teamA: teamA,
-                  teamB: teamB,
-                  teamAScore: teamAScore,
-                  teamBScore: teamBScore,
-                  sport: sport,
-                  court: court,
-                  status: status,
-                  setsA: setsA,
-                  setsB: setsB,
-                ),
-                const SizedBox(height: 24),
+  name: name,
+  teamA: teamA,
+  teamB: teamB,
+  teamAScore: teamAScore,
+  teamBScore: teamBScore,
+  sport: sport,
+  court: court,
+  status: status,
+  setsA: setsA,
+  setsB: setsB,
+),
+const SizedBox(height: 16),
+
+if (isStreaming && hlsUrl.isNotEmpty) ...[
+  SizedBox(
+    width: double.infinity,
+    child: ElevatedButton.icon(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => UserLiveStreamPage(
+              hlsUrl: hlsUrl,
+              title: "$teamA vs $teamB",
+            ),
+          ),
+        );
+      },
+      icon: const Icon(Icons.play_circle_fill),
+      label: const Text("Watch Live Stream"),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+      ),
+    ),
+  ),
+  const SizedBox(height: 16),
+],
+
+const SizedBox(height: 8),
 
                 // Status helper text
                 if (isUpcoming)

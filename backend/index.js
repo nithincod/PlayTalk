@@ -5,8 +5,10 @@ import dotenv from "dotenv";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 
 import "./config/firebase.js";
+import { startMediaServer } from "./mediaServer.js";
 
 import { db,auth } from "./config/firebase.js";
 
@@ -45,7 +47,10 @@ app.use(express.json());
 app.use(authRoutes);
 app.use(matcheventsRouter);
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
+app.use("/live", express.static(path.join(__dirname, "media", "live")));
 
 
 // ================================
@@ -986,6 +991,12 @@ app.get(
               matchId,
               tournamentId,
               collegeId,
+
+              stream: match.stream || {
+                isStreaming: false,
+                streamKey: matchId,
+                hlsUrl: "",
+              }
             });
           }
         }
@@ -1879,6 +1890,12 @@ app.get(
 
             // optional: keep raw score too (good for debugging / future use)
             score: match.score || { teamA: teamAScore, teamB: teamBScore },
+
+            stream: match.stream || {
+              isStreaming: false,
+              streamKey: "matchId",
+              hlsUrl: "",
+            }
           });
         }
       }
@@ -1893,9 +1910,91 @@ app.get(
   }
 );
 
+app.put(
+  "/admin/tournament/:tournamentId/match/:matchId/stream",
+  authMiddleware,
+  requireMatchAdmin,
+  async (req, res) => {
+    try {
+      const { tournamentId, matchId } = req.params;
+      const collegeId = String(req.user.collegeId || "").trim();
+      const adminId = req.user.uid;
+
+      const {
+        isStreaming,
+        streamKey,
+        hlsUrl,
+      } = req.body;
+
+      if (!collegeId) {
+        return res.status(400).json({ error: "collegeId missing in profile" });
+      }
+
+      const normalizedCollegeId = collegeId.toLowerCase();
+
+      let matchRef = db.ref(
+        `tournaments/${normalizedCollegeId}/${tournamentId}/matches/${matchId}`
+      );
+
+      let snap = await matchRef.once("value");
+
+      // fallback to raw path if needed
+      if (!snap.exists() && collegeId !== normalizedCollegeId) {
+        matchRef = db.ref(
+          `tournaments/${collegeId}/${tournamentId}/matches/${matchId}`
+        );
+        snap = await matchRef.once("value");
+      }
+
+      if (!snap.exists()) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      const match = snap.val();
+
+      // Ensure only assigned admin can control stream
+      if (match.assigned_admin?.adminId !== adminId) {
+        return res.status(403).json({ error: "Not assigned admin for this match" });
+      }
+
+      // Recommended: allow stream only if match is live
+      if (match.status !== "live") {
+        return res.status(400).json({ error: "Stream can only be updated when match is live" });
+      }
+
+      const now = Date.now();
+
+      const streamData = {
+        isStreaming: !!isStreaming,
+        streamKey: streamKey || matchId,
+        hlsUrl: hlsUrl || "",
+        updatedAt: now,
+      };
+
+      if (isStreaming) {
+        streamData.startedAt = now;
+        streamData.stoppedAt = null;
+      } else {
+        streamData.stoppedAt = now;
+      }
+
+      await matchRef.child("stream").update(streamData);
+
+      return res.json({
+        message: "Stream metadata updated successfully",
+        stream: streamData,
+      });
+    } catch (err) {
+      console.error("UPDATE STREAM ERROR:", err);
+      return res.status(500).json({ error: "Failed to update stream metadata" });
+    }
+  }
+);
+
 
 
 app.listen(3000, "0.0.0.0", () => {
   console.log("PlayTalk backend running on port 3000 🚀");
+  startMediaServer();
 });
 

@@ -246,6 +246,31 @@ class _UserHomeStyledPageState extends State<UserHomeStyledPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _statusRow(match),
+                if (match.isStreaming) ...[
+  const SizedBox(height: 8),
+  Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.red.withOpacity(0.15),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.wifi_tethering, color: Colors.red, size: 16),
+        SizedBox(width: 6),
+        Text(
+          "LIVE STREAMING",
+          style: TextStyle(
+            color: Colors.red,
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    ),
+  ),
+],
                 const SizedBox(height: 8),
                 Text(
             match.name.isNotEmpty ? match.name : "${match.teamA} vs ${match.teamB}",

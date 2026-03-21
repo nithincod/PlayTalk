@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:playtalk_app/features/match_admin/domain/models/match_admin_model.dart';
+
+import '../../domain/models/match_admin_model.dart';
 
 class AdminMatchesRemoteDatasource {
   final String baseUrl;
@@ -13,32 +14,31 @@ class AdminMatchesRemoteDatasource {
 
   Future<List<MatchAdminModel>> getAssignedMatches() async {
     final response = await http.get(
-      Uri.parse("$baseUrl/admin/assigned-matches"),
+      Uri.parse('$baseUrl/admin/assigned-matches'),
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer $token",
+        'Authorization': 'Bearer $token',
       },
     );
 
+    print("ASSIGNED MATCHES STATUS: ${response.statusCode}");
+    print("ASSIGNED MATCHES BODY: ${response.body}");
+
     if (response.statusCode != 200) {
-      throw Exception("Failed to load assigned matches");
+      throw Exception('Failed to fetch assigned matches');
     }
 
-    final List data = jsonDecode(response.body);
+    final decoded = jsonDecode(response.body);
 
-    return data.map((json) {
-      return MatchAdminModel(
-        matchId: json['matchId'],
-        collegeId: json['collegeId'],
-        name: json['name'],
-        teamA: json['teamA'],
-        teamB: json['teamB'],
-        matchType: json['matchType'],
-        court: json['court'],
-        tournamentId: json['tournamentId'],
-        status: json['status'] ?? 'upcoming',
-        sport: json['sport'] ?? '',
-      );
-    }).toList();
+    if (decoded is! List) {
+      throw Exception('Invalid response format for assigned matches');
+    }
+
+    return decoded
+        .map<MatchAdminModel>((item) {
+          return MatchAdminModel.fromJson(
+            Map<String, dynamic>.from(item),
+          );
+        })
+        .toList();
   }
 }

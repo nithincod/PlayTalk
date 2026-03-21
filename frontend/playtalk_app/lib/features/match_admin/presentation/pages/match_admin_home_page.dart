@@ -5,6 +5,7 @@ import 'package:playtalk_app/features/match_admin/data/datasources/live_match_re
 import 'package:playtalk_app/features/match_admin/presentation/bloc/live_match_bloc.dart';
 import 'package:playtalk_app/features/match_admin/presentation/bloc/match_event_bloc.dart';
 import 'package:playtalk_app/features/match_admin/presentation/pages/live_match_page.dart';
+import 'package:playtalk_app/features/match_admin/presentation/pages/match_stream_control_page.dart';
 
 import '../../data/datasources/match_admin_matches_remote_datasource.dart';
 import '../../data/datasources/match_event_remote_datasource.dart';
@@ -313,6 +314,8 @@ Future<void> _handleLogout() async {
               ),
               const SizedBox(height: 14),
               _actionButton(match),
+              const SizedBox(height: 14),
+              _streamButton(match),
             ],
           ),
         );
@@ -426,6 +429,40 @@ Future<void> _handleLogout() async {
       ),
     );
   }
+
+  Widget _streamButton(MatchAdminModel match) {
+  if (match.status != "live") return const SizedBox();
+
+  return SizedBox(
+    width: double.infinity,
+    child: OutlinedButton.icon(
+      icon: const Icon(Icons.wifi_tethering),
+      label: const Text("Stream Control"),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MatchStreamControlPage(
+              matchId: match.matchId,
+              tournamentId: match.tournamentId,
+              matchName: "${match.teamA} vs ${match.teamB}",
+              initialIsStreaming: match.isStreaming,
+              initialHlsUrl: match.hlsUrl,
+
+            ),
+          ),
+        );
+        if(!mounted) return;
+        context.read<AdminMatchesBloc>().add(LoadAdminMatches());
+      },
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        foregroundColor: const Color(0xFF2D5BFF),
+        side: const BorderSide(color: Color(0xFF2D5BFF)),
+      ),
+    ),
+  );
+}
 
   // ───────────────── BOTTOM NAV ─────────────────
   Widget _bottomNav() {

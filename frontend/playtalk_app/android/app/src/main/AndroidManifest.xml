@@ -1,13 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.playtalk_app">
 
-    <!-- ✅ PERMISSIONS MUST BE HERE -->
-    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Internet permission -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:name="${applicationName}"
         android:label="playtalk_app"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
             android:name=".MainActivity"
@@ -23,8 +25,8 @@
                 android:resource="@style/NormalTheme" />
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
