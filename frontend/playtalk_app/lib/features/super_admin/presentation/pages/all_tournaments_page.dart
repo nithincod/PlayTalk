@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:playtalk_app/features/super_admin/domain/models/tournament_model.dart';
-import 'package:playtalk_app/features/super_admin/presentation/bloc/match_event.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/tornament_state.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/tournament_bloc.dart';
 import 'package:playtalk_app/features/super_admin/presentation/bloc/tournament_event.dart';
+import 'package:playtalk_app/features/super_admin/presentation/pages/team_management_page.dart';
 import 'package:playtalk_app/features/super_admin/presentation/pages/tournament_details_page.dart';
 
-import '../../data/datasources/match_remote_datasource.dart';
 import '../bloc/match_bloc.dart';
 
 class TournamentsPage extends StatefulWidget {
@@ -39,8 +38,9 @@ class _TournamentsPageState extends State<TournamentsPage> {
 
           if (state is TournamentLoaded) {
             final filtered = state.tournaments
-                .where((t) =>
-                    t.name.toLowerCase().contains(search.toLowerCase()))
+                .where(
+                  (t) => t.name.toLowerCase().contains(search.toLowerCase()),
+                )
                 .toList();
 
             if (filtered.isEmpty) {
@@ -61,8 +61,9 @@ class _TournamentsPageState extends State<TournamentsPage> {
                   child: ListView.builder(
                     padding: const EdgeInsets.all(16),
                     itemCount: filtered.length,
-                    itemBuilder: (_, i) =>
-                        _TournamentCard(filtered[i]),
+                    itemBuilder: (_, i) => _TournamentCard(
+                      tournament: filtered[i],
+                    ),
                   ),
                 ),
               ],
@@ -79,10 +80,11 @@ class _TournamentsPageState extends State<TournamentsPage> {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.blue,
-        onPressed: () {},
+        onPressed: () {
+          // TODO: add create tournament flow later if needed
+        },
         child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: _BottomNav(),
     );
   }
 }
@@ -96,7 +98,10 @@ PreferredSizeWidget _buildAppBar() {
     ),
     title: const Text(
       "Tournaments",
-      style: TextStyle(fontWeight: FontWeight.bold,color: Colors.white),
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+      ),
     ),
   );
 }
@@ -130,7 +135,10 @@ class _SearchBar extends StatelessWidget {
 
 class _TournamentCard extends StatelessWidget {
   final TournamentModel tournament;
-  const _TournamentCard(this.tournament);
+
+  const _TournamentCard({
+    required this.tournament,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -140,53 +148,147 @@ class _TournamentCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF1E2438),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.04),
+        ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _SportIcon(tournament.sport),
-          const SizedBox(width: 12),
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                debugPrint("Tapped on ${tournament.name}");
-               
-               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => BlocProvider.value(
-      value: context.read<MatchBloc>(),
-      child: TournamentDetailsPage(
-        tournament: tournament,
-      ),
-    ),
-  ),
-);
+          // TOP SECTION
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () {
+              debugPrint("Tapped on ${tournament.name}");
 
-
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    tournament.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<MatchBloc>(),
+                    child: TournamentDetailsPage(
+                      tournament: tournament,
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    "${tournament.sport} • ${tournament.mode}",
-                    style: const TextStyle(color: Colors.grey),
+                ),
+              );
+            },
+            child: Row(
+              children: [
+                _SportIcon(tournament.sport),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        tournament.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "${tournament.sport} • ${tournament.mode}",
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.blue,
+                  size: 16,
+                ),
+              ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios,
-              color: Colors.blue, size: 16),
+
+          const SizedBox(height: 14),
+
+          // BUTTONS ROW
+          Row(
+            children: [
+              Expanded(
+                child: _actionButton(
+                  icon: Icons.visibility_outlined,
+                  label: "Details",
+                  color: const Color(0xFF2D5BFF),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<MatchBloc>(),
+                          child: TournamentDetailsPage(
+                            tournament: tournament,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _actionButton(
+                  icon: Icons.groups_rounded,
+                  label: "Manage Teams",
+                  color: const Color(0xFF10B981),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TeamManagementPage(
+                          tournamentId: tournament.tournamentId,
+                          tournamentName: tournament.name,
+                          sport: tournament.sport,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      height: 44,
+      child: ElevatedButton.icon(
+        onPressed: onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color.withOpacity(0.14),
+          foregroundColor: color,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        icon: Icon(icon, size: 18),
+        label: Text(
+          label,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 12.5,
+          ),
+        ),
       ),
     );
   }
@@ -204,18 +306,14 @@ class _SportIcon extends StatelessWidget {
 
     if (s.contains("football") || s.contains("soccer")) {
       icon = Icons.sports_soccer;
-    } 
-    else if (s.contains("basketball")) {
+    } else if (s.contains("basketball")) {
       icon = Icons.sports_basketball;
-    } 
-    else if (s.contains("tennis")) {
+    } else if (s.contains("tennis")) {
       icon = Icons.sports_tennis;
-    }
-    else if (s.contains("badminton")) {
-      icon = Icons.sports_tennis; // 🎯 closest: racket sport
-    }
-    else if (s.contains("kabaddi")) {
-      icon = Icons.sports_kabaddi; // ✅ Flutter provides this
+    } else if (s.contains("badminton")) {
+      icon = Icons.sports_tennis; // closest racket icon
+    } else if (s.contains("kabaddi")) {
+      icon = Icons.sports_kabaddi;
     }
 
     return Container(
@@ -228,29 +326,6 @@ class _SportIcon extends StatelessWidget {
         icon,
         color: Colors.blue,
         size: 22,
-      ),
-    );
-  }
-}
-
-class _BottomNav extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const BottomAppBar(
-      color: Color(0xFF0F1424),
-      shape: CircularNotchedRectangle(),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(Icons.home, color: Colors.blue),
-            Icon(Icons.event, color: Colors.grey),
-            SizedBox(width: 40),
-            Icon(Icons.group, color: Colors.grey),
-            Icon(Icons.person, color: Colors.grey),
-          ],
-        ),
       ),
     );
   }

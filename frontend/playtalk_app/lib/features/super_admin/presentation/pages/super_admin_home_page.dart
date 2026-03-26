@@ -15,7 +15,6 @@ import '../bloc/tournament_bloc.dart';
 import '../bloc/tornament_state.dart';
 import '../bloc/tournament_event.dart';
 
-
 class SuperAdminHomePage extends StatefulWidget {
   const SuperAdminHomePage({super.key});
 
@@ -24,16 +23,15 @@ class SuperAdminHomePage extends StatefulWidget {
 }
 
 class _SuperAdminHomePageState extends State<SuperAdminHomePage> {
-
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    context.read<MatchBloc>().add(LoadAllMatches());
-    context.read<TournamentBloc>().add(LoadTournaments());
-  });
-}
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<MatchBloc>().add(LoadAllMatches());
+      context.read<TournamentBloc>().add(LoadTournaments());
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,13 +39,15 @@ void initState() {
       builder: (context, state) {
         return BlocBuilder<MatchBloc, MatchState>(
           builder: (context, matchState) {
-            print("📊 SuperAdminHomePage matchState = ${matchState.runtimeType}");
-if (matchState is MatchLoaded) {
-  print("📊 Dashboard loaded matches count = ${matchState.matches.length}");
-  for (final m in matchState.matches) {
-    print("📊 Dashboard match => ${m.name} | ${m.status}");
-  }
-}
+            print(
+                "📊 SuperAdminHomePage matchState = ${matchState.runtimeType}");
+            if (matchState is MatchLoaded) {
+              print(
+                  "📊 Dashboard loaded matches count = ${matchState.matches.length}");
+              for (final m in matchState.matches) {
+                print("📊 Dashboard match => ${m.name} | ${m.status}");
+              }
+            }
 
             // ✅ keep your existing loading logic
             if (state is TournamentLoading || matchState is MatchLoading) {
@@ -73,12 +73,10 @@ if (matchState is MatchLoaded) {
                   children: [
                     _Header(),
                     const SizedBox(height: 24),
-
                     _StatsGrid(
                       tournamentState: state,
                       matchState: matchState,
                     ),
-
                     const SizedBox(height: 24),
                     _QuickActions(),
                     const SizedBox(height: 24),
@@ -86,7 +84,35 @@ if (matchState is MatchLoaded) {
                   ],
                 ),
               ),
-              bottomNavigationBar: _BottomNav(),
+              bottomNavigationBar: _BottomNav(
+                currentIndex: 0,
+                onTap: (index) {
+                  if (index == 0) return;
+
+                  if (index == 1) {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => const TournamentManagementPage(),
+                    //   ),
+                    // );
+                  } else if (index == 2) {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => const TeamManagementPage(),
+                    //   ),
+                    // );
+                  } else if (index == 3) {
+                    // Navigator.push(
+                    //   context,
+                    //   MaterialPageRoute(
+                    //     builder: (_) => const SuperAdminProfilePage(),
+                    //   ),
+                    // );
+                  }
+                },
+              ),
             );
           },
         );
@@ -94,7 +120,6 @@ if (matchState is MatchLoaded) {
     );
   }
 }
-
 
 class _Header extends StatelessWidget {
   @override
@@ -157,41 +182,41 @@ class _Header extends StatelessWidget {
           icon: const Icon(Icons.settings, color: Colors.white),
           color: const Color(0xFF1E2438),
           onSelected: (value) async {
-  if (value == "logout") {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text("Logout"),
-          content: const Text("Are you sure you want to logout?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text(
-                "Logout",
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+            if (value == "logout") {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (dialogContext) {
+                  return AlertDialog(
+                    title: const Text("Logout"),
+                    content: const Text("Are you sure you want to logout?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        child: const Text("Cancel"),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        child: const Text(
+                          "Logout",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              );
 
-    if (confirm == true) {
-      context.read<SessionCubit>().clearSession();
+              if (confirm == true) {
+                context.read<SessionCubit>().clearSession();
 
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.login,
-        (route) => false,
-      );
-    }
-  }
-},
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppRoutes.login,
+                  (route) => false,
+                );
+              }
+            }
+          },
           itemBuilder: (context) => [
             const PopupMenuItem<String>(
               value: "logout",
@@ -232,8 +257,7 @@ class _StatsGrid extends StatelessWidget {
 
     // 🎯 TOURNAMENT COUNT
     if (tournamentState is TournamentLoaded) {
-      tournaments =
-          (tournamentState as TournamentLoaded).tournaments.length;
+      tournaments = (tournamentState as TournamentLoaded).tournaments.length;
     }
 
     // 🎯 MATCH COUNTS
@@ -253,54 +277,51 @@ class _StatsGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       children: [
         _StatCard(
-          title: "TOURNAMENTS",
-          value: tournaments.toString(),
-          icon: Icons.emoji_events,
-          color: Colors.blue,
-          onTap:(){
-            Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => MultiBlocProvider(
-      providers: [
-        BlocProvider.value(
-          value: context.read<TournamentBloc>(),
-        ),
-        BlocProvider.value(
-          value: context.read<MatchBloc>(),
-        ),
-      ],
-      child: const TournamentsPage(), // or AllTournamentsPage()
-    ),
-  ),
-);
-          }
-        ),
+            title: "TOURNAMENTS",
+            value: tournaments.toString(),
+            icon: Icons.emoji_events,
+            color: Colors.blue,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MultiBlocProvider(
+                    providers: [
+                      BlocProvider.value(
+                        value: context.read<TournamentBloc>(),
+                      ),
+                      BlocProvider.value(
+                        value: context.read<MatchBloc>(),
+                      ),
+                    ],
+                    child: const TournamentsPage(), // or AllTournamentsPage()
+                  ),
+                ),
+              );
+            }),
         _StatCard(
-  title: "ONGOING",
-  value: live.toString(),
-  icon: Icons.play_circle,
-  color: Colors.green,
-  badge: live > 0 ? "LIVE" : null,
-  onTap: () {
-    if (matchState is MatchLoaded) {
-      final matches = (matchState as MatchLoaded).matches;
-      final ongoingMatches = matches
-          .where((m) => m.status == "live")
-          .toList();
+          title: "ONGOING",
+          value: live.toString(),
+          icon: Icons.play_circle,
+          color: Colors.green,
+          badge: live > 0 ? "LIVE" : null,
+          onTap: () {
+            if (matchState is MatchLoaded) {
+              final matches = (matchState as MatchLoaded).matches;
+              final ongoingMatches =
+                  matches.where((m) => m.status == "live").toList();
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OngoingMatchesPage(
-            matches: ongoingMatches,
-          ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OngoingMatchesPage(
+                    matches: ongoingMatches,
+                  ),
+                ),
+              );
+            }
+          },
         ),
-      );
-    }
-  },
-),
-
         _StatCard(
           title: "UPCOMING",
           value: upcoming.toString(),
@@ -315,9 +336,8 @@ class _StatsGrid extends StatelessWidget {
           onTap: () {
             if (matchState is MatchLoaded) {
               final matches = (matchState as MatchLoaded).matches;
-              final finishedMatches = matches
-                  .where((m) => m.status == "finished")
-                  .toList();
+              final finishedMatches =
+                  matches.where((m) => m.status == "finished").toList();
 
               Navigator.push(
                 context,
@@ -335,7 +355,6 @@ class _StatsGrid extends StatelessWidget {
   }
 }
 
-
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -349,7 +368,8 @@ class _StatCard extends StatelessWidget {
     required this.value,
     required this.icon,
     required this.color,
-    this.badge, this.onTap,
+    this.badge,
+    this.onTap,
   });
 
   @override
@@ -431,14 +451,14 @@ class _QuickActions extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () {
               Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (_) => BlocProvider.value(
-      value: context.read<TournamentBloc>(),
-      child: const CreateTournamentPage(),
-    ),
-  ),
-);
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BlocProvider.value(
+                    value: context.read<TournamentBloc>(),
+                    child: const CreateTournamentPage(),
+                  ),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2E4DFF),
@@ -545,21 +565,92 @@ class _ActivityTile extends StatelessWidget {
 }
 
 class _BottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _BottomNav({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
   @override
   Widget build(BuildContext context) {
-    return const BottomAppBar(
-      color: Color(0xFF0F1424),
-      shape: CircularNotchedRectangle(),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BottomAppBar(
+      color: const Color(0xFF0F1424),
+      shape: const CircularNotchedRectangle(),
+      notchMargin: 8,
+      child: SizedBox(
+        height: 70,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _navItem(
+                icon: Icons.home_rounded,
+                label: "Home",
+                index: 0,
+              ),
+              _navItem(
+                icon: Icons.emoji_events_rounded,
+                label: "Tournaments",
+                index: 1,
+              ),
+              _navItem(
+                icon: Icons.groups_rounded,
+                label: "Teams",
+                index: 2,
+              ),
+              _navItem(
+                icon: Icons.person_rounded,
+                label: "Profile",
+                index: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final bool isActive = currentIndex == index;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => onTap(index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: isActive
+              ? const Color(0xFF2D5BFF).withOpacity(0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.home, color: Colors.blue),
-            Icon(Icons.event, color: Colors.grey),
-            SizedBox(width: 40),
-            Icon(Icons.group, color: Colors.grey),
-            Icon(Icons.person, color: Colors.grey),
+            Icon(
+              icon,
+              color: isActive ? const Color(0xFF2D5BFF) : Colors.grey,
+              size: 22,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? const Color(0xFF2D5BFF) : Colors.grey,
+                fontSize: 10,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                height: 1.0,
+              ),
+            ),
           ],
         ),
       ),

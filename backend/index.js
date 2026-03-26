@@ -15,6 +15,7 @@ import { db,auth } from "./config/firebase.js";
 import matcheventsRouter from "./routes/match_events.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
+import bracketRoutes from "./routes/bracketRoutes.js";
 import {
   requireSuperAdmin,
   requireMatchAdmin,
@@ -47,10 +48,12 @@ app.use(express.json());
 app.use(authRoutes);
 app.use(matcheventsRouter);
 
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 app.use("/live", express.static(path.join(__dirname, "media", "live")));
+app.use("/", bracketRoutes);
 
 
 // ================================
@@ -1991,10 +1994,195 @@ app.put(
   }
 );
 
+app.post(
+  "/superadmin/tournament/:tournamentId/team",
+  authMiddleware,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { tournamentId } = req.params;
+      const collegeId = req.user.collegeId;
+      const { name, sport, players = [], captain = "" } = req.body;
+
+      console.log("CREATE TEAM REQUEST:", {
+        tournamentId,
+        collegeId,
+        body: req.body,
+      });
+
+      if (!name || !sport) {
+        return res.status(400).json({ error: "Team name and sport are required" });
+      }
+
+      const tournamentRef = db.ref(`tournaments/${collegeId}/${tournamentId}`);
+      const tournamentSnap = await tournamentRef.once("value");
+
+      if (!tournamentSnap.exists()) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      const teamRef = tournamentRef.child("teams").push();
+      const teamId = teamRef.key;
+
+      const safePlayers = Array.isArray(players)
+  ? players
+      .map((p) => String(p).trim())
+      .filter((p) => p.length > 0)
+  : [];
+
+      const teamData = {
+        teamId,
+        name: String(name).trim(),
+        sport: String(sport).trim().toLowerCase(),
+        collegeId,
+        tournamentId,
+        players: safePlayers,
+        captain: String(captain || "").trim(),
+        createdAt: Date.now(),
+      };
+
+      await teamRef.set(teamData);
+
+      return res.status(201).json({
+        message: "Team created successfully",
+        team: teamData,
+      });
+    } catch (err) {
+      console.error("CREATE TEAM ERROR:", err);
+      return res.status(500).json({ error: "Failed to create team" });
+    }
+  }
+);
+
+
+app.get(
+  "/superadmin/tournament/:tournamentId/teams",
+  authMiddleware,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { tournamentId } = req.params;
+      const collegeId = req.user.collegeId;
+
+      console.log("FETCH TEAMS REQUEST:", {
+        tournamentId,
+        collegeId,
+      });
+
+      const teamsRef = db.ref(`tournaments/${collegeId}/${tournamentId}/teams`);
+      const teamsSnap = await teamsRef.once("value");
+
+      if (!teamsSnap.exists()) {
+        return res.json([]);
+      }
+
+      const teams = [];
+      teamsSnap.forEach((child) => {
+        const team = child.val();
+
+        teams.push({
+          teamId: child.key,
+          ...team,
+        });
+      });
+
+      return res.json(teams);
+    } catch (err) {
+      console.error("FETCH TEAMS ERROR:", err);
+      return res.status(500).json({ error: "Failed to fetch teams" });
+    }
+  }
+);
+
+app.delete(
+  "/superadmin/tournament/:tournamentId/team/:teamId",
+  authMiddleware,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { tournamentId, teamId } = req.params;
+      const collegeId = req.user.collegeId;
+
+      console.log("DELETE TEAM REQUEST:", {
+        tournamentId,
+        teamId,
+        collegeId,
+      });
+
+      const teamRef = db.ref(`tournaments/${collegeId}/${tournamentId}/teams/${teamId}`);
+      const teamSnap = await teamRef.once("value");
+
+      if (!teamSnap.exists()) {
+        return res.status(404).json({ error: "Team not found" });
+      }
+
+      await teamRef.remove();
+
+      return res.json({
+        message: "Team deleted successfully",
+      });
+    } catch (err) {
+      console.error("DELETE TEAM ERROR:", err);
+      return res.status(500).json({ error: "Failed to delete team" });
+    }
+  }
+);
+
+app.get(
+  "/superadmin/tournament/:tournamentId/summary",
+  authMiddleware,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { tournamentId } = req.params;
+      const collegeId = req.user.collegeId;
+
+      const tournamentRef = db.ref(`tournaments/${collegeId}/${tournamentId}`);
+      const snap = await tournamentRef.once("value");
+
+      if (!snap.exists()) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      const tournament = snap.val() || {};
+      const teams = tournament.teams || {};
+      const matches = tournament.matches || {};
+
+      const teamsCount = Object.keys(teams).length;
+      const matchesCount = Object.keys(matches).length;
+
+      // Optional recent matches
+      const recentMatches = Object.entries(matches)
+        .map(([matchId, match]) => ({
+          matchId,
+          ...match,
+        }))
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, 5);
+
+      return res.json({
+        tournamentId,
+        name: tournament.name || "",
+        sport: tournament.sport || "",
+        mode: tournament.mode || "",
+        status: tournament.status || "active",
+        teamsCount,
+        matchesCount,
+        recentMatches,
+      });
+    } catch (err) {
+      console.error("TOURNAMENT SUMMARY ERROR:", err);
+      return res.status(500).json({ error: "Failed to fetch tournament summary" });
+    }
+  }
+);
+
 
 
 app.listen(3000, "0.0.0.0", () => {
   console.log("PlayTalk backend running on port 3000 🚀");
   startMediaServer();
 });
+
+
 
