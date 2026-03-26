@@ -269,9 +269,8 @@ export async function submitMatchEvent(req, res) {
       }
     }
 
-    // ======================================================
-// 8.5) GENERATE + SAVE AI COMMENTARY  ✅ FIXED
-// Save commentary INSIDE the event node, not match-level root
+// ======================================================
+// 8.5) GENERATE + SAVE AI COMMENTARY
 // ======================================================
 let savedCommentary = null;
 
@@ -284,8 +283,11 @@ if (updatedState && typeof updatedState === "object") {
   });
 
   if (commentary?.text) {
+    // save in tournament match node
+    const commentaryRef = tournamentMatchRef.child("commentary").push();
+
     savedCommentary = {
-      commentaryId: db.ref().push().key,
+      commentaryId: commentaryRef.key,
       eventId: event.eventId,
       type: "ai_commentary",
       category: commentary.category || "point",
@@ -295,26 +297,30 @@ if (updatedState && typeof updatedState === "object") {
       scoreSnapshot: updatedState.score || null,
     };
 
-    // ✅ Save commentary INSIDE tournament event node
+    await commentaryRef.set(savedCommentary);
+
+    // mirror inside event also (VERY IMPORTANT for frontend flexibility)
     await tournamentMatchRef
       .child("events")
-      .child(eventRef.key)
+      .child(event.eventId)
       .child("commentary")
       .set(savedCommentary);
 
-    // ✅ Mirror commentary INSIDE global event node too
+    // optional mirror to global match node
     if (globalSnapshot.exists()) {
       await globalMatchRef
+        .child("commentary")
+        .child(commentaryRef.key)
+        .set(savedCommentary);
+
+      await globalMatchRef
         .child("events")
-        .child(eventRef.key)
+        .child(event.eventId)
         .child("commentary")
         .set(savedCommentary);
     }
 
-    // ✅ Attach to returned event object too (nice for immediate API response)
-    event.commentary = savedCommentary;
-
-    console.log("🎙️ Commentary saved inside event:", savedCommentary.text);
+    console.log("🎙️ Commentary saved:", savedCommentary.text);
   }
 }
 

@@ -11,9 +11,20 @@ export default function badminton(match, event) {
           team: null,
           streak: 0,
         },
+        winner: null,
       };
 
-  // Ensure backward compatibility if older matches don't have new fields
+  // ======================================================
+  // BACKWARD COMPATIBILITY FOR OLDER MATCHES
+  // ======================================================
+  if (score.setsA === undefined || score.setsA === null) {
+    score.setsA = 0;
+  }
+
+  if (score.setsB === undefined || score.setsB === null) {
+    score.setsB = 0;
+  }
+
   if (!score.currentSet) {
     score.currentSet = { A: 0, B: 0 };
   }
@@ -33,21 +44,28 @@ export default function badminton(match, event) {
     score.lastPointBy = null;
   }
 
-  // Only handle point events
+  if (score.winner === undefined) {
+    score.winner = null;
+  }
+
+  // ======================================================
+  // ONLY HANDLE POINT EVENTS
+  // ======================================================
   if (event.type === "POINT") {
     const scoringTeam = event.team;
+    const pointValue = Number(event.value || 1);
 
     // ======================================================
-    // 1) UPDATE POINTS
+    // 1) UPDATE CURRENT SET POINTS
     // ======================================================
     if (scoringTeam === match.teamA) {
-      score.currentSet.A += event.value;
+      score.currentSet.A += pointValue;
     } else if (scoringTeam === match.teamB) {
-      score.currentSet.B += event.value;
+      score.currentSet.B += pointValue;
     }
 
     // ======================================================
-    // 2) UPDATE MOMENTUM
+    // 2) UPDATE MOMENTUM (CONSECUTIVE POINTS)
     // ======================================================
     if (score.lastPointBy === scoringTeam) {
       score.momentum.team = scoringTeam;
@@ -62,9 +80,12 @@ export default function badminton(match, event) {
 
   // ======================================================
   // 3) CHECK SET WIN
+  // Badminton:
+  // - First to 21 with 2-point lead
+  // - Cap at 30
   // ======================================================
-  const a = score.currentSet.A;
-  const b = score.currentSet.B;
+  const a = Number(score.currentSet.A || 0);
+  const b = Number(score.currentSet.B || 0);
 
   const isSetWon =
     (((a >= 21 || b >= 21) && Math.abs(a - b) >= 2) ||
@@ -72,7 +93,7 @@ export default function badminton(match, event) {
       b === 30);
 
   if (isSetWon) {
-    const setNumber = (score.setsA || 0) + (score.setsB || 0) + 1;
+    const setNumber = Number(score.setsA || 0) + Number(score.setsB || 0) + 1;
 
     let setWinner = null;
     let setLoser = null;
@@ -87,27 +108,36 @@ export default function badminton(match, event) {
       setLoser = match.teamA;
     }
 
-    // Store completed set snapshot BEFORE reset
+    // ======================================================
+    // STORE COMPLETED SET SNAPSHOT BEFORE RESET
+    // ======================================================
     score.lastCompletedSet = {
       winner: setWinner,
       loser: setLoser,
       scoreA: a,
       scoreB: b,
       setNumber,
+      endedAt: Date.now(),
     };
 
-    // Reset current set
+    // ======================================================
+    // RESET CURRENT SET FOR NEXT SET
+    // ======================================================
     score.currentSet = { A: 0, B: 0 };
 
-    // Optional: reset momentum after a set ends
+    // Reset momentum after set ends
     score.momentum = {
       team: null,
       streak: 0,
     };
+
+    // Optional: keep lastPointBy as set winner
+    score.lastPointBy = setWinner;
   }
 
   // ======================================================
   // 4) CHECK MATCH WIN (BEST OF 3)
+  // First to 2 sets
   // ======================================================
   let winner = null;
 
@@ -119,8 +149,11 @@ export default function badminton(match, event) {
     score.winner = match.teamB;
   }
 
+  // ======================================================
   // IMPORTANT:
-  // Return top-level winner too, so your existing flow can use it easily
+  // Return top-level winner for your existing flow
+  // This is REQUIRED for your current submitMatchEvent logic
+  // ======================================================
   if (winner) {
     return {
       score,

@@ -4,9 +4,22 @@ import 'package:playtalk_app/features/user/presentation/bloc/user_live_bloc.dart
 import 'package:playtalk_app/features/user/presentation/pages/user_live_stream_page.dart';
 
 import '../../domain/models/user_match_model.dart';
-
 import '../bloc/user_live_match_event.dart';
 import '../bloc/user_live_match_state.dart';
+
+class _FeedItem {
+  final String id;
+  final String kind; // event | commentary
+  final int timestamp;
+  final Map<String, dynamic> data;
+
+  _FeedItem({
+    required this.id,
+    required this.kind,
+    required this.timestamp,
+    required this.data,
+  });
+}
 
 class UserMatchDetailsPage extends StatefulWidget {
   final UserMatchModel match;
@@ -25,7 +38,6 @@ class _UserMatchDetailsPageState extends State<UserMatchDetailsPage> {
   void initState() {
     super.initState();
 
-    // Start realtime listener after widget is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<UserLiveMatchBloc>().add(
             WatchUserLiveMatch(
@@ -72,8 +84,12 @@ class _UserMatchDetailsPageState extends State<UserMatchDetailsPage> {
           final liveData = state.match ?? {};
           debugPrint("LIVE DATA: $liveData");
 
+          int _toInt(dynamic value) {
+            return int.tryParse((value ?? 0).toString()) ?? 0;
+          }
+
           // ─────────────────────────────────────────────
-          // BASIC FIELDS (prefer live data, fallback to passed match)
+          // BASIC FIELDS
           // ─────────────────────────────────────────────
           final String teamA = (liveData["teamA"] ?? baseMatch.teamA).toString();
           final String teamB = (liveData["teamB"] ?? baseMatch.teamB).toString();
@@ -83,24 +99,22 @@ class _UserMatchDetailsPageState extends State<UserMatchDetailsPage> {
           final String status =
               (liveData["status"] ?? baseMatch.status).toString().toLowerCase();
 
+          final String round = (liveData["round"] ?? "").toString();
+
           final stream = liveData["stream"] is Map
-    ? Map<String, dynamic>.from(liveData["stream"])
-    : <String, dynamic>{
-        "isStreaming": baseMatch.isStreaming,
-        "streamKey": baseMatch.streamKey,
-        "hlsUrl": baseMatch.hlsUrl,
-      };
+              ? Map<String, dynamic>.from(liveData["stream"])
+              : <String, dynamic>{
+                  "isStreaming": baseMatch.isStreaming,
+                  "streamKey": baseMatch.streamKey,
+                  "hlsUrl": baseMatch.hlsUrl,
+                };
 
-final bool isStreaming = stream["isStreaming"] == true;
-final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();    
+          final bool isStreaming = stream["isStreaming"] == true;
+          final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
 
           // ─────────────────────────────────────────────
-          // SCORE PARSING (supports multiple backend formats)
+          // SCORE PARSING
           // ─────────────────────────────────────────────
-          int _toInt(dynamic value) {
-            return int.tryParse((value ?? 0).toString()) ?? 0;
-          }
-
           int teamAScore = baseMatch.teamAScore;
           int teamBScore = baseMatch.teamBScore;
 
@@ -109,17 +123,11 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
           if (score is Map) {
             final scoreMap = Map<String, dynamic>.from(score);
 
-            // ✅ BADMINTON / SET-BASED FORMAT
             if (scoreMap["currentSet"] is Map) {
-              final currentSet =
-                  Map<String, dynamic>.from(scoreMap["currentSet"]);
-
+              final currentSet = Map<String, dynamic>.from(scoreMap["currentSet"]);
               teamAScore = _toInt(currentSet["A"]);
               teamBScore = _toInt(currentSet["B"]);
-            }
-
-            // ✅ Generic flat score format
-            else {
+            } else {
               teamAScore = _toInt(
                 scoreMap["teamA"] ??
                     scoreMap["teamAScore"] ??
@@ -136,7 +144,6 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
             }
           }
 
-          // ✅ Top-level fallback
           teamAScore = _toInt(
             liveData["teamAScore"] ??
                 liveData["scoreA"] ??
@@ -151,15 +158,30 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
                 teamBScore,
           );
 
-          // Optional: set-based info for badminton
           int setsA = 0;
           int setsB = 0;
+          Map<String, dynamic> lastCompletedSet = {};
+          Map<String, dynamic> momentum = {};
+          String winner = "";
 
           if (score is Map) {
             final scoreMap = Map<String, dynamic>.from(score);
             setsA = _toInt(scoreMap["setsA"]);
             setsB = _toInt(scoreMap["setsB"]);
+
+            if (scoreMap["lastCompletedSet"] is Map) {
+              lastCompletedSet =
+                  Map<String, dynamic>.from(scoreMap["lastCompletedSet"]);
+            }
+
+            if (scoreMap["momentum"] is Map) {
+              momentum = Map<String, dynamic>.from(scoreMap["momentum"]);
+            }
+
+            winner = (scoreMap["winner"] ?? "").toString();
           }
+
+          winner = (liveData["winner"] ?? winner).toString();
 
           // ─────────────────────────────────────────────
           // EVENTS PARSING
@@ -178,7 +200,6 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
               };
             }).toList();
 
-            // latest first
             events.sort(
               (a, b) => _toInt(b["timestamp"]).compareTo(_toInt(a["timestamp"])),
             );
@@ -193,7 +214,7 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
             );
           }
 
-          // ✅ Fallback: derive score from events if score missing
+          // fallback derive score if needed
           if (events.isNotEmpty && teamAScore == 0 && teamBScore == 0) {
             final teamANormalized = teamA.trim().toLowerCase();
             final teamBNormalized = teamB.trim().toLowerCase();
@@ -216,6 +237,91 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
             }
           }
 
+          // ─────────────────────────────────────────────
+          // COMMENTARY PARSING
+          // Supports:
+          // 1) event.commentary
+          // 2) match.commentary node
+          // ─────────────────────────────────────────────
+          List<Map<String, dynamic>> commentaryItems = [];
+
+          // A) commentary inside events
+          for (final e in events) {
+            final rawCommentary = e["commentary"];
+            if (rawCommentary is Map) {
+              final commentaryMap = Map<String, dynamic>.from(rawCommentary);
+              commentaryItems.add({
+                "commentaryId":
+                    (commentaryMap["commentaryId"] ?? e["eventId"]).toString(),
+                ...commentaryMap,
+                "linkedEventId": e["eventId"],
+              });
+            }
+          }
+
+          // B) dedicated commentary node
+          final rawCommentaryNode = liveData["commentary"];
+          if (rawCommentaryNode is Map) {
+            final commentaryMap = Map<String, dynamic>.from(rawCommentaryNode);
+
+            final parsedNodeCommentary = commentaryMap.entries.map((entry) {
+              final val = Map<String, dynamic>.from(entry.value);
+              return {
+                "commentaryId": entry.key,
+                ...val,
+              };
+            }).toList();
+
+            commentaryItems.addAll(parsedNodeCommentary);
+          }
+
+          // Deduplicate commentary
+          final seenCommentaryIds = <String>{};
+          commentaryItems = commentaryItems.where((c) {
+            final id = (c["commentaryId"] ?? "").toString();
+            if (id.isEmpty) return false;
+            if (seenCommentaryIds.contains(id)) return false;
+            seenCommentaryIds.add(id);
+            return true;
+          }).toList();
+
+          commentaryItems.sort(
+            (a, b) => _toInt(b["createdAt"] ?? b["timestamp"])
+                .compareTo(_toInt(a["createdAt"] ?? a["timestamp"])),
+          );
+
+          // ─────────────────────────────────────────────
+          // UNIFIED FEED
+          // ─────────────────────────────────────────────
+          List<_FeedItem> feed = [];
+
+          for (final e in events) {
+            feed.add(
+              _FeedItem(
+                id: (e["eventId"] ?? "").toString(),
+                kind: "event",
+                timestamp: _toInt(e["timestamp"]),
+                data: e,
+              ),
+            );
+          }
+
+          for (final c in commentaryItems) {
+            feed.add(
+              _FeedItem(
+                id: (c["commentaryId"] ?? "").toString(),
+                kind: "commentary",
+                timestamp: _toInt(c["createdAt"] ?? c["timestamp"]),
+                data: c,
+              ),
+            );
+          }
+
+          feed.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+          final highlights =
+              commentaryItems.where((c) => c["important"] == true).toList();
+
           final bool isLive = status == "live";
           final bool isUpcoming = status == "upcoming";
           final bool isFinished = status == "finished";
@@ -226,49 +332,48 @@ final String hlsUrl = (stream["hlsUrl"] ?? baseMatch.hlsUrl).toString();
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _scoreCard(
-  name: name,
-  teamA: teamA,
-  teamB: teamB,
-  teamAScore: teamAScore,
-  teamBScore: teamBScore,
-  sport: sport,
-  court: court,
-  status: status,
-  setsA: setsA,
-  setsB: setsB,
-),
-const SizedBox(height: 16),
+                  name: name,
+                  teamA: teamA,
+                  teamB: teamB,
+                  teamAScore: teamAScore,
+                  teamBScore: teamBScore,
+                  sport: sport,
+                  court: court,
+                  status: status,
+                  setsA: setsA,
+                  setsB: setsB,
+                  round: round,
+                  winner: winner,
+                ),
+                const SizedBox(height: 16),
 
-if (isStreaming && hlsUrl.isNotEmpty) ...[
-  SizedBox(
-    width: double.infinity,
-    child: ElevatedButton.icon(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => UserLiveStreamPage(
-              hlsUrl: hlsUrl,
-              title: "$teamA vs $teamB",
-            ),
-          ),
-        );
-      },
-      icon: const Icon(Icons.play_circle_fill),
-      label: const Text("Watch Live Stream"),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-      ),
-    ),
-  ),
-  const SizedBox(height: 16),
-],
+                if (isStreaming && hlsUrl.isNotEmpty) ...[
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => UserLiveStreamPage(
+                              hlsUrl: hlsUrl,
+                              title: "$teamA vs $teamB",
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.play_circle_fill),
+                      label: const Text("Watch Live Stream"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
-const SizedBox(height: 8),
-
-                // Status helper text
                 if (isUpcoming)
                   _infoBanner(
                     icon: Icons.schedule,
@@ -279,13 +384,49 @@ const SizedBox(height: 8),
                 if (isFinished)
                   _infoBanner(
                     icon: Icons.emoji_events,
-                    text: "Match finished. Final result shown above.",
+                    text: winner.isNotEmpty
+                        ? "Match finished. Winner: $winner"
+                        : "Match finished. Final result shown above.",
                     color: Colors.grey,
                   ),
 
-                if (isLive || events.isNotEmpty) ...[
+                if (isLive)
+                  _livePulseBanner(
+                    sport: sport,
+                    teamAScore: teamAScore,
+                    teamBScore: teamBScore,
+                    setsA: setsA,
+                    setsB: setsB,
+                  ),
+
+                if (sport.toLowerCase() == "badminton")
+                  _badmintonInsights(
+                    setsA: setsA,
+                    setsB: setsB,
+                    lastCompletedSet: lastCompletedSet,
+                    momentum: momentum,
+                    winner: winner,
+                    status: status,
+                  ),
+
+                if (highlights.isNotEmpty) ...[
+                  const SizedBox(height: 18),
                   const Text(
-                    "Match Timeline",
+                    "Highlights",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _highlightsSection(highlights),
+                ],
+
+                if (isLive || feed.isNotEmpty) ...[
+                  const SizedBox(height: 18),
+                  const Text(
+                    "Live Commentary",
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 24,
@@ -293,7 +434,7 @@ const SizedBox(height: 8),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _timeline(events, teamA, teamB),
+                  _cricbuzzFeed(feed),
                 ],
               ],
             ),
@@ -317,6 +458,8 @@ const SizedBox(height: 8),
     required String status,
     required int setsA,
     required int setsB,
+    required String round,
+    required String winner,
   }) {
     final Color statusColor = status == "live"
         ? Colors.green
@@ -376,6 +519,17 @@ const SizedBox(height: 8),
             ],
           ),
 
+          if (round.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              round,
+              style: const TextStyle(
+                color: Colors.blueAccent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+
           const SizedBox(height: 20),
 
           // Teams + score
@@ -383,13 +537,27 @@ const SizedBox(height: 8),
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _teamColumn(teamA),
-              Text(
-                "$teamAScore : $teamBScore",
-                style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              Column(
+                children: [
+                  Text(
+                    "$teamAScore : $teamBScore",
+                    style: const TextStyle(
+                      fontSize: 34,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  if (winner.isNotEmpty && status == "finished") ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      "Winner: $winner",
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
               ),
               _teamColumn(teamB),
             ],
@@ -397,22 +565,28 @@ const SizedBox(height: 8),
 
           const SizedBox(height: 18),
 
-          // Optional sets row (very useful for badminton)
           if (sport.toLowerCase() == "badminton") ...[
             Center(
-              child: Text(
-                "Sets  $setsA - $setsB",
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  "Sets  $setsA - $setsB",
+                  style: const TextStyle(
+                    color: Colors.blueAccent,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ),
             const SizedBox(height: 14),
           ],
 
-          // Meta row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -513,15 +687,198 @@ const SizedBox(height: 8),
     );
   }
 
+  Widget _livePulseBanner({
+    required String sport,
+    required int teamAScore,
+    required int teamBScore,
+    required int setsA,
+    required int setsB,
+  }) {
+    String text = "Live updates coming in";
+
+    if (sport.toLowerCase() == "badminton") {
+      text = "Current set score: $teamAScore-$teamBScore • Sets: $setsA-$setsB";
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.withOpacity(0.25)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Colors.redAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ─────────────────────────────────────────────
-  // TIMELINE
+  // BADMINTON INSIGHTS
   // ─────────────────────────────────────────────
-  Widget _timeline(
-    List<Map<String, dynamic>> events,
-    String teamA,
-    String teamB,
-  ) {
-    if (events.isEmpty) {
+  Widget _badmintonInsights({
+    required int setsA,
+    required int setsB,
+    required Map<String, dynamic> lastCompletedSet,
+    required Map<String, dynamic> momentum,
+    required String winner,
+    required String status,
+  }) {
+    final hasLastSet = lastCompletedSet.isNotEmpty;
+    final hasMomentum = momentum.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151B2E),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Badminton Insights",
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+            ),
+          ),
+          const SizedBox(height: 14),
+          _insightRow("Sets Score", "$setsA - $setsB"),
+          if (hasLastSet)
+            _insightRow(
+              "Last Completed Set",
+              "Set ${lastCompletedSet["setNumber"] ?? "-"} • "
+              "${lastCompletedSet["scoreA"] ?? 0}-${lastCompletedSet["scoreB"] ?? 0} • "
+              "${lastCompletedSet["winner"] ?? ""}",
+            ),
+          if (hasMomentum)
+            _insightRow(
+              "Momentum",
+              "${momentum["team"] ?? ""} (${momentum["streak"] ?? 0} straight points)",
+            ),
+          if (status == "finished" && winner.isNotEmpty)
+            _insightRow("Winner", winner),
+        ],
+      ),
+    );
+  }
+
+  Widget _insightRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 130,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white54,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // HIGHLIGHTS
+  // ─────────────────────────────────────────────
+  Widget _highlightsSection(List<Map<String, dynamic>> highlights) {
+    return Column(
+      children: highlights.take(5).map((c) {
+        final text = (c["text"] ?? "").toString();
+        final time = _formatTimestamp(c["createdAt"] ?? c["timestamp"]);
+
+        return Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.amber.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.amber.withOpacity(0.25)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.local_fire_department, color: Colors.amber),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                    if (time.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        time,
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // CRICBUZZ STYLE FEED
+  // ─────────────────────────────────────────────
+  Widget _cricbuzzFeed(List<_FeedItem> feed) {
+    if (feed.isEmpty) {
       return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(18),
@@ -530,35 +887,105 @@ const SizedBox(height: 8),
           borderRadius: BorderRadius.circular(18),
         ),
         child: const Text(
-          "No events yet",
+          "No updates yet",
           style: TextStyle(color: Colors.grey),
         ),
       );
     }
 
     return Column(
-      children: events.map((event) {
-        final type = (event["type"] ?? "event").toString().toUpperCase();
-        final team = (event["team"] ?? "").toString();
-        final value = (event["value"] ?? 0).toString();
-        final meta = event["meta"];
-        final timestamp = _formatTimestamp(event["timestamp"]);
+      children: feed.map((item) {
+        if (item.kind == "commentary") {
+          final c = item.data;
+          final text = (c["text"] ?? "Live update").toString();
+          final category = (c["category"] ?? "update").toString();
+          final important = c["important"] == true;
+          final time = _formatTimestamp(item.timestamp);
 
-        String subtitle = "$type";
-        if (team.isNotEmpty) {
-          subtitle += " • $team";
+          return Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: important
+                  ? Colors.amber.withOpacity(0.10)
+                  : const Color(0xFF151B2E),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: important
+                    ? Colors.amber.withOpacity(0.35)
+                    : Colors.white.withOpacity(0.04),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: important
+                        ? Colors.amber.withOpacity(0.18)
+                        : const Color(0xFF1B4DFF).withOpacity(0.18),
+                  ),
+                  child: Icon(
+                    important ? Icons.campaign : Icons.mic,
+                    color: important ? Colors.amber : const Color(0xFF1B9CFF),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (category.isNotEmpty)
+                        Text(
+                          category.toUpperCase(),
+                          style: TextStyle(
+                            color: important ? Colors.amber : Colors.blueAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      if (category.isNotEmpty) const SizedBox(height: 6),
+                      Text(
+                        text,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
+                      ),
+                      if (time.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          time,
+                          style: const TextStyle(
+                            color: Colors.grey,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
         }
 
-        if (value != "0" && value != "null") {
-          subtitle += " (+$value)";
-        }
+        final e = item.data;
+        final type = (e["type"] ?? "event").toString().toUpperCase();
+        final team = (e["team"] ?? "").toString();
+        final value = (e["value"] ?? 0).toString();
+        final timestamp = _formatTimestamp(item.timestamp);
 
-        // Add extra meta info if available
-        if (meta is Map && meta.isNotEmpty) {
-          if (meta["label"] != null) {
-            subtitle += " • ${meta["label"]}";
-          }
-        }
+        String subtitle = type;
+        if (team.isNotEmpty) subtitle += " • $team";
+        if (value != "0" && value != "null") subtitle += " (+$value)";
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -591,7 +1018,7 @@ const SizedBox(height: 8),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
-                        fontSize: 16,
+                        fontSize: 15,
                       ),
                     ),
                     if (timestamp.isNotEmpty) ...[

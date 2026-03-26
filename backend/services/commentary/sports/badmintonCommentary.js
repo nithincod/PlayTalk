@@ -1,121 +1,11 @@
-function getSafeScore(score) {
-  return score || {
-    setsA: 0,
-    setsB: 0,
-    currentSet: { A: 0, B: 0 },
-    lastCompletedSet: null,
-    lastPointBy: null,
-    momentum: {
-      team: null,
-      streak: 0,
-    },
-  };
+function safeNum(v) {
+  return Number(v || 0);
 }
 
-function getTeamSide(match, teamName) {
-  if (teamName === match.teamA) return "A";
-  if (teamName === match.teamB) return "B";
+function getTeamSide(matchBefore, event) {
+  if (event.team === matchBefore.teamA) return "A";
+  if (event.team === matchBefore.teamB) return "B";
   return null;
-}
-
-function isDeuce(a, b) {
-  return a >= 20 && b >= 20;
-}
-
-function isGamePointForA(a, b) {
-  if (a === 30) return true;
-  if (a >= 20 && a - b === 1) return true;
-  return false;
-}
-
-function isGamePointForB(a, b) {
-  if (b === 30) return true;
-  if (b >= 20 && b - a === 1) return true;
-  return false;
-}
-
-function buildRegularPointLine(scoringTeam, a, b) {
-  const diff = Math.abs(a - b);
-
-  if (a === b) {
-    if (a >= 18) {
-      return `${scoringTeam} draws level at ${a}-${b} — this set is getting intense!`;
-    }
-    return `${scoringTeam} makes it ${a}-${b}. We are all square.`;
-  }
-
-  if (diff >= 4) {
-    return `${scoringTeam} extends the lead to ${a}-${b} and is in control of this phase.`;
-  }
-
-  if (diff === 1) {
-    return `${scoringTeam} edges ahead at ${a}-${b} in a very tight set.`;
-  }
-
-  return `${scoringTeam} takes the point and moves to ${a}-${b}.`;
-}
-
-function buildDeuceLine(a, b) {
-  return `Locked at ${a}-${b} — two clear points needed now to take the set!`;
-}
-
-function buildGamePointLine(teamName, a, b) {
-  return `Game point for ${teamName} at ${a}-${b} — huge pressure on the next rally.`;
-}
-
-function buildSetWinLine(match, afterScore) {
-  const lastSet = afterScore.lastCompletedSet;
-
-  if (!lastSet) {
-    const setsA = afterScore.setsA || 0;
-    const setsB = afterScore.setsB || 0;
-    const winner = setsA > setsB ? match.teamA : match.teamB;
-    return `${winner} takes the set and now leads ${setsA}-${setsB} in sets.`;
-  }
-
-  const { winner, scoreA, scoreB, setNumber } = lastSet;
-  const setsA = afterScore.setsA || 0;
-  const setsB = afterScore.setsB || 0;
-
-  if (setNumber === 1) {
-    return `${winner} takes the opening set ${scoreA}-${scoreB} and leads 1-0.`;
-  }
-
-  if (setsA === setsB) {
-    return `${winner} wins set ${setNumber} by ${scoreA}-${scoreB} and levels the match at ${setsA}-${setsB}.`;
-  }
-
-  return `${winner} claims set ${setNumber} ${scoreA}-${scoreB} and now leads ${setsA}-${setsB} in sets.`;
-}
-
-function buildMatchWinLine(match, afterScore) {
-  const setsA = afterScore.setsA || 0;
-  const setsB = afterScore.setsB || 0;
-  const winner = afterScore.winner || (setsA > setsB ? match.teamA : match.teamB);
-
-  const lastSet = afterScore.lastCompletedSet;
-
-  if (lastSet) {
-    return `${winner} closes out the match by taking the final set ${lastSet.scoreA}-${lastSet.scoreB}! Final sets score: ${setsA}-${setsB}.`;
-  }
-
-  return `${winner} seals the match in style! Final sets score: ${setsA}-${setsB}.`;
-}
-
-function buildMomentumLine(scoringTeam, streak, a, b) {
-  if (streak >= 5) {
-    return `${scoringTeam} is on a huge ${streak}-point run and surges ahead at ${a}-${b}!`;
-  }
-
-  if (streak >= 3) {
-    return `${scoringTeam} makes it ${streak} straight points and builds momentum at ${a}-${b}.`;
-  }
-
-  return null;
-}
-
-function buildMomentumBreakLine(scoringTeam, a, b) {
-  return `${scoringTeam} breaks the momentum and gets a crucial point at ${a}-${b}.`;
 }
 
 export default function generateBadmintonCommentary({
@@ -123,120 +13,167 @@ export default function generateBadmintonCommentary({
   event,
   updatedState,
 }) {
-  if (!updatedState?.score) return null;
-  if (event.type !== "POINT") return null;
+  const beforeScore = matchBefore.score || {};
+  const afterScore = updatedState.score || {};
 
-  const beforeScore = getSafeScore(matchBefore.score);
-  const afterScore = getSafeScore(updatedState.score);
+  const beforeCurrent = beforeScore.currentSet || { A: 0, B: 0 };
+  const afterCurrent = afterScore.currentSet || { A: 0, B: 0 };
 
-  const beforeSetsA = beforeScore.setsA ?? 0;
-  const beforeSetsB = beforeScore.setsB ?? 0;
+  const beforeSetsA = safeNum(beforeScore.setsA);
+  const beforeSetsB = safeNum(beforeScore.setsB);
 
-  const afterSetsA = afterScore.setsA ?? 0;
-  const afterSetsB = afterScore.setsB ?? 0;
+  const afterSetsA = safeNum(afterScore.setsA);
+  const afterSetsB = safeNum(afterScore.setsB);
 
-  const afterA = afterScore.currentSet?.A ?? 0;
-  const afterB = afterScore.currentSet?.B ?? 0;
+  const teamA = matchBefore.teamA || "Team A";
+  const teamB = matchBefore.teamB || "Team B";
 
-  const side = getTeamSide(matchBefore, event.team);
-  if (!side) return null;
+  const scoringTeam = event.team || "";
+  const side = getTeamSide(matchBefore, event);
+
+  const a = safeNum(afterCurrent.A);
+  const b = safeNum(afterCurrent.B);
+
+  const beforeA = safeNum(beforeCurrent.A);
+  const beforeB = safeNum(beforeCurrent.B);
+
+  const winner = updatedState.winner || afterScore.winner || null;
+  const lastCompletedSet = afterScore.lastCompletedSet || null;
+  const momentum = afterScore.momentum || { team: null, streak: 0 };
 
   // ======================================================
-  // 1) MATCH WIN
+  // 1) MATCH WON
   // ======================================================
-  if (afterScore.winner || updatedState.winner) {
+  if (winner) {
     return {
-      text: buildMatchWinLine(matchBefore, afterScore),
-      category: "match_win",
+      category: "match_point",
       important: true,
+      text: `Match point converted! ${winner} wins the match ${afterSetsA}-${afterSetsB} in sets.`,
     };
   }
 
   // ======================================================
-  // 2) SET WIN
+  // 2) SET JUST COMPLETED
   // ======================================================
-  const setWon =
-    afterSetsA > beforeSetsA || afterSetsB > beforeSetsB;
+  const setCompletedNow = afterSetsA > beforeSetsA || afterSetsB > beforeSetsB;
 
-  if (setWon) {
+  if (setCompletedNow && lastCompletedSet) {
+    const setNo = safeNum(lastCompletedSet.setNumber);
+    const setWinner = lastCompletedSet.winner || scoringTeam;
+    const scoreA = safeNum(lastCompletedSet.scoreA);
+    const scoreB = safeNum(lastCompletedSet.scoreB);
+
+    const isDeuceBattle =
+      (scoreA >= 20 && scoreB >= 20) || scoreA >= 22 || scoreB >= 22;
+
     return {
-      text: buildSetWinLine(matchBefore, afterScore),
       category: "set_win",
       important: true,
+      text: isDeuceBattle
+          ? `${setWinner} steals Set ${setNo} ${scoreA}-${scoreB} after a tense deuce battle.`
+          : `${setWinner} takes Set ${setNo} ${scoreA}-${scoreB}.`,
     };
   }
 
   // ======================================================
-  // 3) DEUCE
+  // 3) SET POINT
   // ======================================================
-  if (isDeuce(afterA, afterB)) {
-    return {
-      text: buildDeuceLine(afterA, afterB),
-      category: "deuce",
-      important: true,
-    };
-  }
-
-  // ======================================================
-  // 4) GAME POINT
-  // ======================================================
-  if (isGamePointForA(afterA, afterB)) {
-    return {
-      text: buildGamePointLine(matchBefore.teamA, afterA, afterB),
-      category: "game_point",
-      important: true,
-    };
-  }
-
-  if (isGamePointForB(afterA, afterB)) {
-    return {
-      text: buildGamePointLine(matchBefore.teamB, afterA, afterB),
-      category: "game_point",
-      important: true,
-    };
-  }
-
-  // ======================================================
-  // 5) MOMENTUM BREAK
-  // If previous streak was 3+ by other team, and this team scores now
-  // ======================================================
-  const previousMomentumTeam = beforeScore.momentum?.team;
-  const previousMomentumStreak = beforeScore.momentum?.streak ?? 0;
-
-  if (
-    previousMomentumTeam &&
-    previousMomentumTeam !== event.team &&
-    previousMomentumStreak >= 3
-  ) {
-    return {
-      text: buildMomentumBreakLine(event.team, afterA, afterB),
-      category: "momentum_break",
-      important: false,
-    };
-  }
-
-  // ======================================================
-  // 6) MOMENTUM RUN
-  // ======================================================
-  const streak = afterScore.momentum?.streak ?? 0;
-
-  if (streak >= 3) {
-    const momentumLine = buildMomentumLine(event.team, streak, afterA, afterB);
-    if (momentumLine) {
+  if (side === "A") {
+    if ((a === 20 && b <= 18) || (a === 29 && b === 28)) {
       return {
-        text: momentumLine,
-        category: "momentum",
-        important: streak >= 5,
+        category: "set_point",
+        important: true,
+        text: `Set point for ${teamA} at ${a}-${b}.`,
+      };
+    }
+  }
+
+  if (side === "B") {
+    if ((b === 20 && a <= 18) || (b === 29 && a === 28)) {
+      return {
+        category: "set_point",
+        important: true,
+        text: `Set point for ${teamB} at ${a}-${b}.`,
       };
     }
   }
 
   // ======================================================
-  // 7) REGULAR POINT
+  // 4) DEUCE / PRESSURE
+  // ======================================================
+  if (a >= 20 && b >= 20 && Math.abs(a - b) <= 1) {
+    return {
+      category: "pressure",
+      important: true,
+      text: `We're deep into a pressure situation at ${a}-${b} in this set!`,
+    };
+  }
+
+  // ======================================================
+  // 5) MOMENTUM SWING
+  // ======================================================
+  if (momentum.team && safeNum(momentum.streak) >= 3) {
+    return {
+      category: "momentum",
+      important: safeNum(momentum.streak) >= 4,
+      text:
+        safeNum(momentum.streak) >= 4
+          ? `Massive momentum swing! ${momentum.team} has taken ${momentum.streak} straight points.`
+          : `${momentum.team} is building pressure with ${momentum.streak} points in a row.`,
+    };
+  }
+
+  // ======================================================
+  // 6) COMEBACK ALERT
+  // ======================================================
+  const beforeDiff = beforeA - beforeB;
+  const afterDiff = a - b;
+
+  if (beforeDiff <= -4 && afterDiff >= -1) {
+    return {
+      category: "comeback",
+      important: true,
+      text: `Comeback alert! ${teamA} has fought back brilliantly to ${a}-${b}.`,
+    };
+  }
+
+  if (beforeDiff >= 4 && afterDiff <= 1) {
+    return {
+      category: "comeback",
+      important: true,
+      text: `Comeback alert! ${teamB} has clawed back into the set at ${a}-${b}.`,
+    };
+  }
+
+  // ======================================================
+  // 7) BIG LEAD / CONTROL
+  // ======================================================
+  if (Math.abs(a - b) >= 5 && (a >= 11 || b >= 11)) {
+    const leader = a > b ? teamA : teamB;
+    return {
+      category: "dominance",
+      important: false,
+      text: `${leader} is taking control of this set at ${a}-${b}.`,
+    };
+  }
+
+  // ======================================================
+  // 8) TIGHT SET
+  // ======================================================
+  if (Math.abs(a - b) <= 2 && (a + b) >= 8) {
+    return {
+      category: "point",
+      important: false,
+      text: `${scoringTeam} edges ahead at ${a}-${b} in a very tight set.`,
+    };
+  }
+
+  // ======================================================
+  // 9) DEFAULT
   // ======================================================
   return {
-    text: buildRegularPointLine(event.team, afterA, afterB),
     category: "point",
     important: false,
+    text: `${scoringTeam} wins the point. Current set score: ${a}-${b}.`,
   };
 }
